@@ -9,7 +9,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "devDependencies": {
-    "tailwindcss": "^3.4.10"
+  "dependencies": {
+    "three": "^0.168.0"
   }
 }
