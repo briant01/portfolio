@@ -1,0 +1,8 @@
+Model Information:
+* title:	Old Computer V2
+* source:	https://sketchfab.com/3d-models/old-computer-v2-b389fddc31ea459597fb3e1d23dcb545
+* author:	SketchyBot (https://sketchfab.com/SketchyB0t_3D_Fabrication)
+
+Model License:
+* license type:	SKETCHFAB Standard (https://sketchfab.com/licenses)
+* requirements:	Under basic restrictions, use worldwide, on all types of media, commercially or not, and in all types of derivative works
