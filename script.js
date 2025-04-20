@@ -27,8 +27,8 @@ const outlinePass = new THREE.OutlinePass(
 outlinePass.edgeStrength = 3;
 outlinePass.edgeGlow = 1;
 outlinePass.edgeThickness = 2;
-outlinePass.visibleEdgeColor.set(0x00ff00);
-outlinePass.hiddenEdgeColor.set(0x00ff00);
+outlinePass.visibleEdgeColor.set(0xffffff);
+outlinePass.hiddenEdgeColor.set(0xffffff);
 composer.addPass(outlinePass);
 
 // Add orbit controls
@@ -39,6 +39,7 @@ controls.screenSpacePanning = false;
 controls.minDistance = 2;
 controls.maxDistance = 10;
 controls.maxPolarAngle = Math.PI / 2;
+controls.enabled = false; // Start with controls disabled
 
 // Add stronger ambient lighting for even illumination
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
@@ -57,17 +58,28 @@ const topLight = new THREE.PointLight(0xffffff, 0.5);
 topLight.position.set(0, 5, 0);
 scene.add(topLight);
 
-// Position camera to match reference image angle
+// Set initial camera position
 camera.position.set(2, 2, 4);
 camera.lookAt(0, 0, 0);
+
+// Store initial camera state
+const initialCameraPosition = camera.position.clone();
+const initialCameraLookAt = new THREE.Vector3(0, 0, 0);
 
 // Variables for camera animation
 let isAnimating = false;
 let originalCameraPosition = null;
-let originalCameraRotation = null;
-const targetCameraPosition = new THREE.Vector3(0, 0.7, 2);
-const zoomDuration = 2500;
+let currentLookAtTarget = initialCameraLookAt.clone();
+// Adjusted target position to better align with screen
+const targetCameraPosition = new THREE.Vector3(0, 0.3, 1.2);
+const targetCameraLookAt = new THREE.Vector3(0, 0.3, 0);
+const zoomDuration = 1500; // Faster transition to reduce drift
 let animationStartTime = 0;
+let isZoomedIn = false;
+
+// Initialize camera state
+let lastCameraPosition = camera.position.clone();
+let lastLookAtTarget = initialCameraLookAt.clone();
 
 // Raycaster for mouse interaction
 const raycaster = new THREE.Raycaster();
@@ -99,6 +111,11 @@ loader.load(
             if (child.isMesh) {
                 child.material.metalness = 0.3;
                 child.material.roughness = 0.7;
+                // Tag monitor screen meshes to ignore for glow
+                if (child.name.toLowerCase().includes('screen') || 
+                    child.material.name.toLowerCase().includes('screen')) {
+                    child.userData.isScreen = true;
+                }
             }
         });
 
@@ -124,17 +141,26 @@ function onClick(event) {
     const intersects = raycaster.intersectObjects(scene.children, true);
 
     if (intersects.length > 0) {
-        if (!originalCameraPosition) {
+        isAnimating = true;
+        animationStartTime = performance.now();
+        controls.enabled = false;
+
+        // Store exact current position and target
+        if (!isZoomedIn) {
+            // Zoom in
             originalCameraPosition = camera.position.clone();
-            originalCameraRotation = camera.rotation.clone();
-            isAnimating = true;
-            animationStartTime = performance.now();
-            controls.enabled = false;
+            currentLookAtTarget = new THREE.Vector3(0, 0, 0);
         } else {
-            isAnimating = true;
-            animationStartTime = performance.now();
-            [originalCameraPosition, targetCameraPosition] = [camera.position.clone(), originalCameraPosition];
+            // Zoom out
+            originalCameraPosition = camera.position.clone();
+            currentLookAtTarget = targetCameraLookAt.clone();
+            const temp = targetCameraPosition.clone();
+            targetCameraPosition.copy(initialCameraPosition);
+            setTimeout(() => {
+                targetCameraPosition.copy(temp);
+            }, zoomDuration);
         }
+        isZoomedIn = !isZoomedIn;
     }
 }
 
@@ -146,8 +172,15 @@ function onMouseMove(event) {
     const intersects = raycaster.intersectObjects(scene.children, true);
 
     if (intersects.length > 0) {
-        selectedObject = intersects[0].object;
-        outlinePass.selectedObjects = [selectedObject];
+        const object = intersects[0].object;
+        // Only show glow on non-screen parts
+        if (!object.userData.isScreen) {
+            selectedObject = object;
+            outlinePass.selectedObjects = [selectedObject];
+        } else {
+            selectedObject = null;
+            outlinePass.selectedObjects = [];
+        }
     } else {
         selectedObject = null;
         outlinePass.selectedObjects = [];
@@ -155,36 +188,46 @@ function onMouseMove(event) {
 }
 
 function animateCamera(currentTime) {
-    if (!isAnimating) return;
+    if (!isAnimating) {
+        return;
+    }
 
     const elapsed = currentTime - animationStartTime;
     const progress = Math.min(elapsed / zoomDuration, 1);
     
-    // Enhanced smooth easing function
-    const eased = progress < 0.5
-        ? 2 * progress * progress
-        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+    // More precise easing function
+    const eased = 1 - Math.pow(1 - progress, 4); // Adjusted power for smoother end
 
     if (progress < 1) {
-        // Smooth position transition
+        // Precise position transition
         camera.position.lerpVectors(
             originalCameraPosition,
             targetCameraPosition,
             eased
         );
 
-        // Update camera look-at
-        const targetLookAt = new THREE.Vector3(0, 0, 0);
-        const currentLookAt = new THREE.Vector3();
-        currentLookAt.lerpVectors(
-            originalCameraPosition.clone().add(new THREE.Vector3(0, 0, -1)),
-            targetLookAt,
-            eased
-        );
-        camera.lookAt(currentLookAt);
+        // Direct lookAt transition
+        if (isZoomedIn) {
+            camera.lookAt(targetCameraLookAt);
+        } else {
+            const currentLookAt = new THREE.Vector3();
+            currentLookAt.lerpVectors(
+                currentLookAtTarget,
+                initialCameraLookAt,
+                eased
+            );
+            camera.lookAt(currentLookAt);
+        }
     } else {
         isAnimating = false;
-        controls.enabled = true;
+        if (!isZoomedIn) {
+            controls.enabled = true;
+            camera.position.copy(initialCameraPosition);
+            camera.lookAt(initialCameraLookAt);
+        } else {
+            camera.position.copy(targetCameraPosition);
+            camera.lookAt(targetCameraLookAt);
+        }
     }
 }
 
