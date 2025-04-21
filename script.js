@@ -66,8 +66,10 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.1; // Slightly increased exposure
 
-// Create audio element for boot sound
-const bootupSound = new Audio('sounds/computer bootup.mp3');
+// Create audio elements for sounds
+const bootupSound = new Audio('sounds/Boot Up.mp3');
+const enterTerminalSound = new Audio('sounds/Enter Terminal.mp3');
+const exitTerminalSound = new Audio('sounds/Exit Terminal.mp3');
 
 // Create audio elements for typing sounds
 const baseKeyboardSound = new Audio('sounds/old keyboard.mp3');
@@ -308,6 +310,8 @@ function updateBootScreen() {
                 setTimeout(() => {
                     showTerminal = true;
                     currentPage = 'home';
+                    enterTerminalSound.currentTime = 0;
+                    enterTerminalSound.play();
                     updateBootScreen();
                 }, 1000);
             }
@@ -353,7 +357,7 @@ const cameraStates = {
         lookAt: new THREE.Vector3(0, 0, 0)
     },
     zoomedIn: {
-        position: new THREE.Vector3(0.05, 0.4, 0.32),
+        position: new THREE.Vector3(0.05, 0.4, 0.1),
         lookAt: new THREE.Vector3(0.05, 0.4, 0)
     }
 };
@@ -486,10 +490,18 @@ function onClick(event) {
         animationStartTime = performance.now();
         isZoomedIn = !isZoomedIn;
         
-        if (isZoomedIn && bootupProgress === 0 && !isBooting) {
-            isBooting = true;
-            bootupSound.currentTime = 0;
-            bootupSound.play();
+        if (isZoomedIn) {
+            if (bootupProgress === 0 && !isBooting) {
+                isBooting = true;
+                bootupSound.currentTime = 0;
+                bootupSound.play();
+            } else if (bootupProgress >= 1) {
+                enterTerminalSound.currentTime = 0;
+                enterTerminalSound.play();
+            }
+        } else {
+            exitTerminalSound.currentTime = 0;
+            exitTerminalSound.play();
         }
     }
 }
