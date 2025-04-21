@@ -1,5 +1,23 @@
 // Initialize Three.js scene
 const scene = new THREE.Scene();
+
+// Terminal content configuration - obfuscated
+const _0x5f2d = [
+    "QnJpYW4gVHJhbSdzIFBvcnRmb2xpbw0KPT09PT09PT09PT09PT09PT09PT09PT09DQpUeXBlICdoZWxwJyB0byBzZWUgYXZhaWxhYmxlIGNvbW1hbmRzLg0KDQo=",
+    "QXZhaWxhYmxlIENvbW1hbmRzDQo9PT09PT09PT09PT09PT0NCmhlbHAgICAgIC0gU2hvdyB0aGlzIGhlbHAgbWVudQ0KaG9tZSAgICAgLSBSZXR1cm4gdG8gaG9tZSBwYWdlDQpjbGVhciAgICAtIENsZWFyIHRlcm1pbmFsDQphYm91dCAgICAtIEFib3V0IG1lDQpwcm9qZWN0cyAtIFZpZXcgbXkgcHJvamVjdHMNCmNvbnRhY3QgIC0gQ29udGFjdCBpbmZvcm1hdGlvbg0KDQpUeXBlIGEgY29tbWFuZCBhbmQgcHJlc3MgRW50ZXIuDQo=",
+    "QWJvdXQgTWUNCj09PT09PT09PQ0KSSBhbSBhIHNvZnR3YXJlIGRldmVsb3BlciB3aXRoIGEgcGFzc2lvbiBmb3IgY3JlYXRpbmcgaW50ZXJhY3RpdmUgYW5kIGVuZ2FnaW5nIHdlYiBleHBlcmllbmNlcy4NCg0K",
+    "TXkgUHJvamVjdHMNCj09PT09PT09PT09PQ0KMS4gUG9ydGZvbGlvIFdlYnNpdGUgKEN1cnJlbnQpDQoyLiBQcm9qZWN0IDINCjMuIFByb2plY3QgMw0KDQo=",
+    "Q29udGFjdCBJbmZvcm1hdGlvbg0KPT09PT09PT09PT09PT09PT09DQpFbWFpbDogZXhhbXBsZUBlbWFpbC5jb20NCkdpdEh1YjogZ2l0aHViLmNvbS91c2VybmFtZQ0KTGlua2VkSW46IGxpbmtlZGluLmNvbS9pbi91c2VybmFtZQ0KDQo="
+];
+
+const terminalContent = {
+    home: atob(_0x5f2d[0]),
+    help: atob(_0x5f2d[1]),
+    about: atob(_0x5f2d[2]),
+    projects: atob(_0x5f2d[3]),
+    contact: atob(_0x5f2d[4])
+};
+
 // Load and set sky texture
 const skyLoader = new THREE.TextureLoader();
 const skyTexture = skyLoader.load('textures/roblox sky.jpeg');
@@ -326,7 +344,7 @@ function updateBootScreen() {
         const lineHeight = 20;
         
         // Draw page content
-        const pageContent = terminalPages[currentPage];
+        const pageContent = terminalContent[currentPage];
         const lines = pageContent.split('\n');
         lines.forEach(line => {
             screenCtx.fillText(line, 20, yPos);
@@ -729,22 +747,14 @@ window.addEventListener('keydown', (event) => {
 function handleCommand(cmd) {
     switch(cmd) {
         case 'help':
-            currentPage = 'help';
-            break;
         case 'home':
-            currentPage = 'home';
+        case 'about':
+        case 'projects':
+        case 'contact':
+            currentPage = cmd;
             break;
         case 'clear':
             terminalHistory.length = 0;
-            break;
-        case 'about':
-            currentPage = 'about';
-            break;
-        case 'projects':
-            currentPage = 'projects';
-            break;
-        case 'contact':
-            currentPage = 'contact';
             break;
         default:
             if (cmd) {
