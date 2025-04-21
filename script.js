@@ -53,6 +53,8 @@ sunLight.shadow.camera.bottom = -10;
 scene.add(sunLight);
 
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.near = 0.3; // Increased from 0.1 to prevent seeing through models
+camera.updateProjectionMatrix();
 const renderer = new THREE.WebGLRenderer({ 
     antialias: true,
     powerPreference: "low-power"
@@ -128,11 +130,15 @@ const outlinePass = new THREE.OutlinePass(
     scene,
     camera
 );
-outlinePass.edgeStrength = 3;
-outlinePass.edgeGlow = 1;
-outlinePass.edgeThickness = 2;
+outlinePass.edgeStrength = 2;
+outlinePass.edgeGlow = 0.5;
+outlinePass.edgeThickness = 1;
 outlinePass.visibleEdgeColor.set(0xffffff);
 outlinePass.hiddenEdgeColor.set(0xffffff);
+outlinePass.pulsePeriod = 0;
+outlinePass.usePatternTexture = false;
+outlinePass.depthTest = true;
+outlinePass.depthFail = false;
 composer.addPass(outlinePass);
 
 // Create volumetric light cone geometry
@@ -215,7 +221,7 @@ function createPendantLamp(position) {
 }
 
 // Create and add pendant lamps
-const lamp1 = createPendantLamp(new THREE.Vector3(0, 3, 0));
+const lamp1 = createPendantLamp(new THREE.Vector3(0, 5, 0));
 scene.add(lamp1);
 
 // Add a subtle front light for the screen
@@ -249,7 +255,7 @@ const terminalHistory = [];
 // Terminal content
 const terminalPages = {
     home: `
-Welcome to Brian's Terminal Portfolio
+Brian Tram's Portfolio
 ===================================
 Type 'help' to see available commands.
 
@@ -520,6 +526,13 @@ function onMouseMove(event) {
     }
 }
 
+// Store the last orbital camera state
+let lastOrbitalState = {
+    position: new THREE.Vector3(),
+    rotationX: 0,
+    rotationY: 0
+};
+
 function animateCamera(currentTime) {
     if (!isAnimating) return;
 
@@ -527,30 +540,128 @@ function animateCamera(currentTime) {
     const progress = Math.min(elapsed / zoomDuration, 1);
     const eased = 1 - Math.pow(1 - progress, 3);
 
-    const startState = isZoomedIn ? cameraStates.default : cameraStates.zoomedIn;
-    const endState = isZoomedIn ? cameraStates.zoomedIn : cameraStates.default;
-
-    if (progress < 1) {
-        camera.position.lerpVectors(startState.position, endState.position, eased);
+    if (isZoomedIn) {
+        // Zooming in - store current orbital state
+        lastOrbitalState.position.copy(camera.position);
+        lastOrbitalState.rotationX = currentRotationX;
+        lastOrbitalState.rotationY = currentRotationY;
+        
+        // Animate to zoomed position
+        camera.position.lerpVectors(lastOrbitalState.position, cameraStates.zoomedIn.position, eased);
         const currentLookAt = new THREE.Vector3();
-        currentLookAt.lerpVectors(startState.lookAt, endState.lookAt, eased);
+        currentLookAt.lerpVectors(new THREE.Vector3(0, 0, 0), cameraStates.zoomedIn.lookAt, eased);
         camera.lookAt(currentLookAt);
     } else {
-        camera.position.copy(endState.position);
-        camera.lookAt(endState.lookAt);
+        // Zooming out - restore orbital state
+        const startPosition = cameraStates.zoomedIn.position.clone();
+        const endPosition = new THREE.Vector3();
+        
+        // Calculate end position based on stored rotation
+        endPosition.x = Math.sin(lastOrbitalState.rotationX) * orbitRadius;
+        endPosition.z = Math.cos(lastOrbitalState.rotationX) * orbitRadius;
+        endPosition.y = 2 + Math.sin(lastOrbitalState.rotationY) * 2;
+        
+        camera.position.lerpVectors(startPosition, endPosition, eased);
+        camera.lookAt(0, 0, 0);
+        
+        // Restore rotation values
+        if (progress >= 1) {
+            currentRotationX = lastOrbitalState.rotationX;
+            currentRotationY = lastOrbitalState.rotationY;
+            targetRotationX = lastOrbitalState.rotationX;
+            targetRotationY = lastOrbitalState.rotationY;
+        }
+    }
+
+    if (progress >= 1) {
         isAnimating = false;
     }
 }
 
-// Animation loop
+// Add mouse movement variables
+let mouseX = 0;
+let mouseY = 0;
+let targetRotationX = 0;
+let targetRotationY = 0;
+let currentRotationX = 0;
+let currentRotationY = 0;
+let isDragging = false;
+let previousMouseX = 0;
+let previousMouseY = 0;
+const orbitRadius = 4.5; // Distance from center
+const orbitSpeed = 0.15; // Speed of rotation
+const maxTiltY = 0.5; // Maximum up/down tilt
+const rotationSpeed = 0.005; // Reduced from 0.01 to make panning slower
+
+// Update mouse controls
+document.addEventListener('mousedown', (event) => {
+    if (event.button === 0 && !isZoomedIn) { // Left click only
+        isDragging = true;
+        previousMouseX = event.clientX;
+        previousMouseY = event.clientY;
+    }
+});
+
+document.addEventListener('mouseup', () => {
+    isDragging = false;
+});
+
+document.addEventListener('mousemove', (event) => {
+    if (isDragging && !isZoomedIn) {
+        const deltaX = event.clientX - previousMouseX;
+        const deltaY = event.clientY - previousMouseY;
+        
+        targetRotationX += deltaX * rotationSpeed;
+        targetRotationY = Math.max(-maxTiltY, Math.min(maxTiltY, targetRotationY + deltaY * rotationSpeed));
+        
+        previousMouseX = event.clientX;
+        previousMouseY = event.clientY;
+    }
+});
+
+// Prevent dragging from selecting text
+document.addEventListener('dragstart', (event) => {
+    if (isDragging) {
+        event.preventDefault();
+    }
+});
+
+// Modify the animation loop
 function animate(currentTime) {
     requestAnimationFrame(animate);
+    
+    if (!isAnimating && !isZoomedIn) {
+        // Smooth camera movement
+        currentRotationX += (targetRotationX - currentRotationX) * orbitSpeed;
+        currentRotationY += (targetRotationY - currentRotationY) * orbitSpeed;
+
+        // Calculate camera position on a sphere
+        camera.position.x = Math.sin(currentRotationX) * orbitRadius;
+        camera.position.z = Math.cos(currentRotationX) * orbitRadius;
+        camera.position.y = 2 + Math.sin(currentRotationY) * 2;
+
+        // Add minimum distance check
+        const minDistance = 1.5; // Minimum distance from center
+        const currentDistance = Math.sqrt(
+            camera.position.x * camera.position.x +
+            camera.position.y * camera.position.y +
+            camera.position.z * camera.position.z
+        );
+
+        if (currentDistance < minDistance) {
+            const scale = minDistance / currentDistance;
+            camera.position.multiplyScalar(scale);
+        }
+
+        // Always look at the center
+        camera.lookAt(0, 0, 0);
+    }
+
     animateCamera(currentTime);
     
     // Update bootup animation
     if (isBooting && bootupProgress < 1) {
-        // Calculate progress based on audio time, but complete slightly before audio ends
-        const progress = (bootupSound.currentTime / bootupSound.duration) * 1.2; // Complete 20% faster than audio
+        const progress = (bootupSound.currentTime / bootupSound.duration) * 1.2;
         bootupProgress = Math.min(progress, 1);
         
         if (bootupProgress >= 1) {
@@ -565,13 +676,16 @@ function animate(currentTime) {
 
 animate();
 
-// Handle window resize
+// Update window resize handler
 window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    
+    camera.aspect = width / height;
     camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    composer.setSize(window.innerWidth, window.innerHeight);
-    outlinePass.resolution.set(window.innerWidth, window.innerHeight);
+    renderer.setSize(width, height);
+    composer.setSize(width, height);
+    outlinePass.resolution.set(width, height);
 });
 
 // Handle keyboard input for terminal
