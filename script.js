@@ -31,21 +31,10 @@ outlinePass.visibleEdgeColor.set(0xffffff);
 outlinePass.hiddenEdgeColor.set(0xffffff);
 composer.addPass(outlinePass);
 
-// Add orbit controls
-const controls = new THREE.OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.05;
-controls.screenSpacePanning = false;
-controls.minDistance = 2;
-controls.maxDistance = 10;
-controls.maxPolarAngle = Math.PI / 2;
-controls.enabled = false; // Start with controls disabled
-
-// Add stronger ambient lighting for even illumination
+// Add lighting
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
 scene.add(ambientLight);
 
-// Add multiple point lights for better coverage
 const frontLight = new THREE.PointLight(0xffffff, 0.5);
 frontLight.position.set(0, 0, 5);
 scene.add(frontLight);
@@ -62,24 +51,25 @@ scene.add(topLight);
 camera.position.set(2, 2, 4);
 camera.lookAt(0, 0, 0);
 
-// Store initial camera state
-const initialCameraPosition = camera.position.clone();
-const initialCameraLookAt = new THREE.Vector3(0, 0, 0);
-
 // Variables for camera animation
 let isAnimating = false;
-let originalCameraPosition = null;
-let currentLookAtTarget = initialCameraLookAt.clone();
-// Adjusted target position to better align with screen
-const targetCameraPosition = new THREE.Vector3(0, 0.3, 1.2);
-const targetCameraLookAt = new THREE.Vector3(0, 0.3, 0);
-const zoomDuration = 1500; // Faster transition to reduce drift
 let animationStartTime = 0;
 let isZoomedIn = false;
 
-// Initialize camera state
-let lastCameraPosition = camera.position.clone();
-let lastLookAtTarget = initialCameraLookAt.clone();
+// Define the two camera states
+const cameraStates = {
+    default: {
+        position: new THREE.Vector3(2, 2, 4),
+        lookAt: new THREE.Vector3(0, 0, 0)
+    },
+    zoomedIn: {
+        position: new THREE.Vector3(0, 0.5, 1.5),
+        lookAt: new THREE.Vector3(0, 0.3, 0)
+    }
+};
+
+// Animation settings
+const zoomDuration = 1000;
 
 // Raycaster for mouse interaction
 const raycaster = new THREE.Raycaster();
@@ -106,12 +96,11 @@ loader.load(
         const scale = 2.5 / maxDim;
         model.scale.multiplyScalar(scale);
 
-        // Apply materials settings for better retro look
+        // Apply materials settings
         model.traverse((child) => {
             if (child.isMesh) {
                 child.material.metalness = 0.3;
                 child.material.roughness = 0.7;
-                // Tag monitor screen meshes to ignore for glow
                 if (child.name.toLowerCase().includes('screen') || 
                     child.material.name.toLowerCase().includes('screen')) {
                     child.userData.isScreen = true;
@@ -143,23 +132,6 @@ function onClick(event) {
     if (intersects.length > 0) {
         isAnimating = true;
         animationStartTime = performance.now();
-        controls.enabled = false;
-
-        // Store exact current position and target
-        if (!isZoomedIn) {
-            // Zoom in
-            originalCameraPosition = camera.position.clone();
-            currentLookAtTarget = new THREE.Vector3(0, 0, 0);
-        } else {
-            // Zoom out
-            originalCameraPosition = camera.position.clone();
-            currentLookAtTarget = targetCameraLookAt.clone();
-            const temp = targetCameraPosition.clone();
-            targetCameraPosition.copy(initialCameraPosition);
-            setTimeout(() => {
-                targetCameraPosition.copy(temp);
-            }, zoomDuration);
-        }
         isZoomedIn = !isZoomedIn;
     }
 }
@@ -173,7 +145,6 @@ function onMouseMove(event) {
 
     if (intersects.length > 0) {
         const object = intersects[0].object;
-        // Only show glow on non-screen parts
         if (!object.userData.isScreen) {
             selectedObject = object;
             outlinePass.selectedObjects = [selectedObject];
@@ -188,57 +159,30 @@ function onMouseMove(event) {
 }
 
 function animateCamera(currentTime) {
-    if (!isAnimating) {
-        return;
-    }
+    if (!isAnimating) return;
 
     const elapsed = currentTime - animationStartTime;
     const progress = Math.min(elapsed / zoomDuration, 1);
-    
-    // More precise easing function
-    const eased = 1 - Math.pow(1 - progress, 4); // Adjusted power for smoother end
+    const eased = 1 - Math.pow(1 - progress, 3);
+
+    const startState = isZoomedIn ? cameraStates.default : cameraStates.zoomedIn;
+    const endState = isZoomedIn ? cameraStates.zoomedIn : cameraStates.default;
 
     if (progress < 1) {
-        // Precise position transition
-        camera.position.lerpVectors(
-            originalCameraPosition,
-            targetCameraPosition,
-            eased
-        );
-
-        // Direct lookAt transition
-        if (isZoomedIn) {
-            camera.lookAt(targetCameraLookAt);
-        } else {
-            const currentLookAt = new THREE.Vector3();
-            currentLookAt.lerpVectors(
-                currentLookAtTarget,
-                initialCameraLookAt,
-                eased
-            );
-            camera.lookAt(currentLookAt);
-        }
+        camera.position.lerpVectors(startState.position, endState.position, eased);
+        const currentLookAt = new THREE.Vector3();
+        currentLookAt.lerpVectors(startState.lookAt, endState.lookAt, eased);
+        camera.lookAt(currentLookAt);
     } else {
+        camera.position.copy(endState.position);
+        camera.lookAt(endState.lookAt);
         isAnimating = false;
-        if (!isZoomedIn) {
-            controls.enabled = true;
-            camera.position.copy(initialCameraPosition);
-            camera.lookAt(initialCameraLookAt);
-        } else {
-            camera.position.copy(targetCameraPosition);
-            camera.lookAt(targetCameraLookAt);
-        }
     }
 }
 
 // Animation loop
 function animate(currentTime) {
     requestAnimationFrame(animate);
-    
-    if (!isAnimating) {
-        controls.update();
-    }
-    
     animateCamera(currentTime);
     composer.render();
 }
@@ -251,7 +195,5 @@ window.addEventListener('resize', () => {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     composer.setSize(window.innerWidth, window.innerHeight);
-    
-    // Update outline pass
     outlinePass.resolution.set(window.innerWidth, window.innerHeight);
 });
