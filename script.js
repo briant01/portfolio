@@ -35,11 +35,11 @@ ground.receiveShadow = true;
 scene.add(ground);
 
 // Adjust lighting for better texture visibility
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); // Increased ambient light
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.2); // Increased from 0.8 to 1.2
 scene.add(ambientLight);
 
 // Adjust sunlight for better texture visibility
-const sunLight = new THREE.DirectionalLight(0xffffff, 1.5); // Increased intensity
+const sunLight = new THREE.DirectionalLight(0xffffff, 2.0); // Increased intensity
 sunLight.position.set(5, 10, 5);
 sunLight.castShadow = true;
 sunLight.shadow.mapSize.width = 2048;
@@ -151,7 +151,7 @@ function createPendantLamp(position) {
     // Create the actual light source
     const light = new THREE.SpotLight(0xffffee, 3);
     light.position.set(0, 0, 0);
-    light.angle = Math.PI / 4;
+    light.angle = Math.PI / 3;
     light.penumbra = 0.5;
     light.decay = 1.5;
     light.distance = 10;
@@ -181,10 +181,8 @@ function createPendantLamp(position) {
 }
 
 // Create and add pendant lamps
-const lamp1 = createPendantLamp(new THREE.Vector3(-1, 3, 0));
-const lamp2 = createPendantLamp(new THREE.Vector3(1, 3, 0));
+const lamp1 = createPendantLamp(new THREE.Vector3(0, 3, 0));
 scene.add(lamp1);
-scene.add(lamp2);
 
 // Add a subtle front light for the screen
 const frontLight = new THREE.DirectionalLight(0xffffff, 0.2);
