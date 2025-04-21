@@ -77,10 +77,10 @@ baseKeyboardSound.volume = 1;
 
 // Create pitched versions of the keyboard sound with varied volumes
 const keyboardSounds = [
-    { pitch: 1, volume: 1.0 },     // Normal pitch, medium-loud
-    { pitch: 1.1, volume: 1.0 },   // Higher pitch, loudest
-    { pitch: 0.9, volume: 0.9 },    // Lower pitch, quieter
-    { pitch: 0.95, volume: 1.0 }    // Between normal and low, medium-loud
+    { pitch: 1.2, volume: 1.0 },    // Higher pitch, medium-loud
+    { pitch: 1.3, volume: 1.0 },    // Even higher pitch, loudest
+    { pitch: 1.1, volume: 0.9 },    // Slightly higher pitch, quieter
+    { pitch: 1.15, volume: 1.0 }    // Between higher pitches, medium-loud
 ];
 
 // Function to play random typing sound with slight random volume variation
@@ -363,7 +363,7 @@ const cameraStates = {
 };
 
 // Animation settings
-const zoomDuration = 1000;
+const zoomDuration = 1500;
 
 // Raycaster for mouse interaction
 const raycaster = new THREE.Raycaster();
@@ -541,17 +541,23 @@ function animateCamera(currentTime) {
     const eased = 1 - Math.pow(1 - progress, 3);
 
     if (isZoomedIn) {
-        // Zooming in - store current orbital state
+        // Store current orbital state
         lastOrbitalState.position.copy(camera.position);
         lastOrbitalState.rotationX = currentRotationX;
         lastOrbitalState.rotationY = currentRotationY;
         
-        // Animate to zoomed position
-        camera.position.lerpVectors(lastOrbitalState.position, cameraStates.zoomedIn.position, eased);
+        // Calculate start and end positions
+        const startPosition = camera.position.clone();
+        const endPosition = cameraStates.zoomedIn.position.clone();
         
-        // Create a smooth lookAt transition that maintains the same viewing direction
-        const startLookAt = new THREE.Vector3(0, 0, 0);
+        // Calculate start and end look targets
+        // This is the key change - create a consistent look direction throughout the animation
+        const startLookAt = new THREE.Vector3(0, 0.4, 0); // Look at middle of screen from the start
         const endLookAt = cameraStates.zoomedIn.lookAt;
+        
+        // Interpolate position and lookAt
+        camera.position.lerpVectors(startPosition, endPosition, eased);
+        
         const currentLookAt = new THREE.Vector3();
         currentLookAt.lerpVectors(startLookAt, endLookAt, eased);
         camera.lookAt(currentLookAt);
@@ -698,18 +704,18 @@ window.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
             handleCommand(currentCommand);
             currentCommand = '';
-            // Play enter key with lower pitch and higher volume
+            // Play enter key with higher pitch and volume
             const sound = new Audio('sounds/old keyboard.mp3');
             sound.preservesPitch = false;
-            sound.playbackRate = 0.8;
+            sound.playbackRate = 1.2;
             sound.volume = 1.0; // Maximum volume
             sound.play();
         } else if (event.key === 'Backspace') {
             currentCommand = currentCommand.slice(0, -1);
-            // Play backspace with slightly different pitch
+            // Play backspace with higher pitch
             const sound = new Audio('sounds/old keyboard.mp3');
             sound.preservesPitch = false;
-            sound.playbackRate = 0.85;
+            sound.playbackRate = 1.25;
             sound.volume = 1.0; // Maximum volume
             sound.play();
         } else if (event.key.length === 1) {
