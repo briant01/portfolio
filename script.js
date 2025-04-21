@@ -258,8 +258,8 @@ screenCanvas.height = 512;
 const screenTexture = new THREE.CanvasTexture(screenCanvas);
 const screenMaterial = new THREE.MeshBasicMaterial({ 
     map: screenTexture,
-    emissive: 0xffffff,
-    emissiveIntensity: 0.2
+    emissive: null, // Remove emissive property
+    emissiveIntensity: 0 // Set to 0 to remove glow
 });
 
 let bootupProgress = 0;
@@ -282,6 +282,31 @@ const terminalPages = {
     contact: modelContainer.dataset.terminalContact
 };
 
+// Function to wrap text
+function wrapText(context, text, x, y, maxWidth, lineHeight) {
+    const words = text.split(' ');
+    let line = '';
+    let posY = y;
+
+    for(let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = context.measureText(testLine);
+        const testWidth = metrics.width;
+        
+        if (testWidth > maxWidth && n > 0) {
+            context.fillText(line, x, posY);
+            line = words[n] + ' ';
+            posY += lineHeight;
+        }
+        else {
+            line = testLine;
+        }
+    }
+    context.fillText(line, x, posY);
+    return posY;
+}
+
+// Update the updateBootScreen function to use text wrapping
 function updateBootScreen() {
     screenCtx.fillStyle = 'black';
     screenCtx.fillRect(0, 0, screenCanvas.width, screenCanvas.height);
@@ -339,21 +364,28 @@ function updateBootScreen() {
         screenCtx.font = '16px "Courier New", monospace';
         screenCtx.fillStyle = '#ffffff';
         
-        // Draw terminal content
         let yPos = 40;
         const lineHeight = 20;
+        const maxWidth = screenCanvas.width - 40; // Leave 20px margin on each side
         
         // Draw page content
         const pageContent = terminalContent[currentPage];
         const lines = pageContent.split('\n');
+        
         lines.forEach(line => {
-            screenCtx.fillText(line, 20, yPos);
-            yPos += lineHeight;
+            // Skip empty lines
+            if (line.trim() === '') {
+                yPos += lineHeight;
+                return;
+            }
+            // Wrap and draw each line
+            yPos = wrapText(screenCtx, line, 20, yPos, maxWidth, lineHeight) + lineHeight;
         });
 
-        // Draw command line
+        // Draw command line with cursor
         yPos += lineHeight;
-        screenCtx.fillText('> ' + currentCommand + (cursorVisible ? '█' : ''), 20, yPos);
+        const prompt = '> ' + currentCommand;
+        wrapText(screenCtx, prompt + (cursorVisible ? '█' : ''), 20, yPos, maxWidth, lineHeight);
     }
     
     screenTexture.needsUpdate = true;
