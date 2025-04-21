@@ -6,6 +6,9 @@ const renderer = new THREE.WebGLRenderer({
     powerPreference: "low-power"
 });
 
+// Create audio element for boot sound
+const bootupSound = new Audio('sounds/computer bootup.mp3');
+
 // Set up renderer
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(0x000000);
@@ -56,122 +59,107 @@ const screenMaterial = new THREE.MeshBasicMaterial({
 });
 
 let bootupProgress = 0;
-let isBooting = false;
+let isBooting = false; // Start as false, will be triggered by click
+
+// Terminal state variables
+let showTerminal = false;
 let currentCommand = '';
-let terminalHistory = [];
-let currentDirectory = '~';
-const commands = {
-    'help': 'Show available commands',
-    'home': 'Display home information',
-    'clear': 'Clear terminal screen'
+let cursorVisible = true;
+let currentPage = 'home';
+const terminalHistory = [];
+
+// Terminal content
+const terminalPages = {
+    home: `
+Welcome to Brian's Terminal Portfolio
+===================================
+Type 'help' to see available commands.
+
+`,
+    help: `
+Available Commands
+================
+help     - Show this help menu
+home     - Return to home page
+clear    - Clear terminal
+about    - About me
+projects - View my projects
+contact  - Contact information
+
+Type a command and press Enter.
+`
 };
-
-function drawTerminal() {
-    screenCtx.fillStyle = 'black';
-    screenCtx.fillRect(0, 0, screenCanvas.width, screenCanvas.height);
-    
-    const lineHeight = 20;
-    let currentY = 30;
-    
-    // Draw terminal history
-    screenCtx.fillStyle = '#ffffff';
-    screenCtx.font = '16px "Courier New", monospace';
-    
-    terminalHistory.forEach(line => {
-        screenCtx.fillText(line, 20, currentY);
-        currentY += lineHeight;
-    });
-    
-    // Draw current input line
-    screenCtx.fillText(`${currentDirectory} > ${currentCommand}_`, 20, currentY);
-    
-    screenTexture.needsUpdate = true;
-}
-
-function executeCommand(cmd) {
-    const command = cmd.toLowerCase().trim();
-    
-    switch(command) {
-        case 'help':
-            terminalHistory.push(`${currentDirectory} > ${cmd}`);
-            terminalHistory.push('Available commands:');
-            Object.entries(commands).forEach(([cmd, desc]) => {
-                terminalHistory.push(`  ${cmd.padEnd(10)} - ${desc}`);
-            });
-            break;
-            
-        case 'home':
-            terminalHistory.push(`${currentDirectory} > ${cmd}`);
-            terminalHistory.push('Welcome to my Portfolio Terminal');
-            terminalHistory.push('------------------------');
-            terminalHistory.push('Name: [Your Name]');
-            terminalHistory.push('Role: Full Stack Developer');
-            terminalHistory.push('Type "help" to see available commands');
-            break;
-            
-        case 'clear':
-            terminalHistory = [];
-            break;
-            
-        case '':
-            terminalHistory.push(`${currentDirectory} >`);
-            break;
-            
-        default:
-            terminalHistory.push(`${currentDirectory} > ${cmd}`);
-            terminalHistory.push(`Command not found: ${cmd}`);
-    }
-    
-    currentCommand = '';
-    drawTerminal();
-}
 
 function updateBootScreen() {
     screenCtx.fillStyle = 'black';
     screenCtx.fillRect(0, 0, screenCanvas.width, screenCanvas.height);
     
-    if (bootupProgress >= 1) {
-        // Switch to terminal mode
-        drawTerminal();
-        return;
-    }
-    
-    if (isBooting || bootupProgress >= 1) {
-        // Set up retro text style
-        screenCtx.fillStyle = '#ffffff';
-        screenCtx.font = 'bold 32px "Courier New", monospace';
-        screenCtx.fillText('LOADING...', 100, 200);
-        
-        // Display percentage
-        const percent = Math.floor(bootupProgress * 100);
-        screenCtx.fillText(percent + '%', 400, 200);
-        
-        // Draw retro progress bar border
-        const barWidth = 300;
-        const barHeight = 30;
-        const barX = 100;
-        const barY = 220;
-        
-        // Outer border (2px thick)
-        screenCtx.fillStyle = '#ffffff';
-        screenCtx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
-        screenCtx.fillStyle = 'black';
-        screenCtx.fillRect(barX, barY, barWidth, barHeight);
-        
-        // Draw segmented progress
-        const segments = 20;
-        const segmentWidth = barWidth / segments;
-        const filledSegments = Math.floor(bootupProgress * segments);
-        
-        screenCtx.fillStyle = '#ffffff';
-        for (let i = 0; i < filledSegments; i++) {
-            screenCtx.fillRect(
-                barX + (i * segmentWidth),
-                barY,
-                segmentWidth - 2,
-                barHeight
-            );
+    if (!showTerminal) {
+        if (isBooting || bootupProgress >= 1) {
+            // Set up retro text style
+            screenCtx.fillStyle = '#ffffff';
+            screenCtx.font = 'bold 32px "Courier New", monospace';
+            screenCtx.fillText('LOADING...', 100, 200);
+            
+            // Display percentage
+            const percent = Math.floor(bootupProgress * 100);
+            screenCtx.fillText(percent + '%', 400, 200);
+            
+            // Draw retro progress bar border
+            const barWidth = 300;
+            const barHeight = 30;
+            const barX = 100;
+            const barY = 220;
+            
+            // Outer border (2px thick)
+            screenCtx.fillStyle = '#ffffff';
+            screenCtx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
+            screenCtx.fillStyle = 'black';
+            screenCtx.fillRect(barX, barY, barWidth, barHeight);
+            
+            // Draw segmented progress
+            const segments = 20;
+            const segmentWidth = barWidth / segments;
+            const filledSegments = Math.floor(bootupProgress * segments);
+            
+            screenCtx.fillStyle = '#ffffff';
+            for (let i = 0; i < filledSegments; i++) {
+                screenCtx.fillRect(
+                    barX + (i * segmentWidth),
+                    barY,
+                    segmentWidth - 2,
+                    barHeight
+                );
+            }
+
+            if (bootupProgress >= 1) {
+                setTimeout(() => {
+                    showTerminal = true;
+                    currentPage = 'home';
+                    updateBootScreen();
+                }, 1000);
+            }
         }
+    } else {
+        // Draw terminal interface
+        screenCtx.font = '16px "Courier New", monospace';
+        screenCtx.fillStyle = '#ffffff';
+        
+        // Draw terminal content
+        let yPos = 40;
+        const lineHeight = 20;
+        
+        // Draw page content
+        const pageContent = terminalPages[currentPage];
+        const lines = pageContent.split('\n');
+        lines.forEach(line => {
+            screenCtx.fillText(line, 20, yPos);
+            yPos += lineHeight;
+        });
+
+        // Draw command line
+        yPos += lineHeight;
+        screenCtx.fillText('> ' + currentCommand + (cursorVisible ? '█' : ''), 20, yPos);
     }
     
     screenTexture.needsUpdate = true;
@@ -206,48 +194,86 @@ const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 let selectedObject = null;
 
-// Load the GLTF model
-const loader = new THREE.GLTFLoader();
-loader.load(
-    'scene.gltf',
+// Load the table model first
+const tableLoader = new THREE.GLTFLoader();
+tableLoader.load(
+    'models/table/scene.gltf',
     function (gltf) {
-        const model = gltf.scene;
-        scene.add(model);
+        const table = gltf.scene;
+        scene.add(table);
         
-        // Center and rotate the model
-        const box = new THREE.Box3().setFromObject(model);
+        // Center and scale the table
+        const box = new THREE.Box3().setFromObject(table);
         const center = box.getCenter(new THREE.Vector3());
-        model.position.sub(center);
-        model.rotation.y = Math.PI / 2;
+        table.position.sub(center);
         
-        // Scale the model
+        // Scale the table
         const size = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 2.5 / maxDim;
-        model.scale.multiplyScalar(scale);
+        const scale = 2.0 / maxDim;
+        table.scale.multiplyScalar(scale);
 
-        // Apply materials settings
-        model.traverse((child) => {
+        // Mark table as non-interactive
+        table.traverse((child) => {
             if (child.isMesh) {
-                child.material.metalness = 0.3;
-                child.material.roughness = 0.7;
-                if (child.name.toLowerCase().includes('screen') || 
-                    child.material.name.toLowerCase().includes('screen')) {
-                    child.userData.isScreen = true;
-                    child.material = screenMaterial;
-                }
+                child.userData.isTable = true;
             }
         });
 
-        // Add event listeners
-        window.addEventListener('click', onClick);
-        window.addEventListener('mousemove', onMouseMove);
+        // Load the computer model after the table is loaded
+        const computerLoader = new THREE.GLTFLoader();
+        computerLoader.load(
+            'models/computer/scene.gltf',
+            function (gltf) {
+                const computer = gltf.scene;
+                scene.add(computer);
+                
+                // Center and rotate the computer
+                const computerBox = new THREE.Box3().setFromObject(computer);
+                const computerCenter = computerBox.getCenter(new THREE.Vector3());
+                computer.position.sub(computerCenter);
+                computer.rotation.y = Math.PI / 2;
+                
+                // Scale the computer
+                const computerSize = computerBox.getSize(new THREE.Vector3());
+                const computerMaxDim = Math.max(computerSize.x, computerSize.y, computerSize.z);
+                const computerScale = 2.5 / computerMaxDim;
+                computer.scale.multiplyScalar(computerScale);
+
+                // Position table below computer instead of moving computer
+                const tableHeight = size.y * scale;
+                table.position.y = computer.position.y - (tableHeight / 2) - (computerSize.y * computerScale / 2);
+
+                // Apply materials settings to computer
+                computer.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material.metalness = 0.3;
+                        child.material.roughness = 0.7;
+                        if (child.name.toLowerCase().includes('screen') || 
+                            child.material.name.toLowerCase().includes('screen')) {
+                            child.userData.isScreen = true;
+                            child.material = screenMaterial;
+                        }
+                    }
+                });
+
+                // Add event listeners
+                window.addEventListener('click', onClick);
+                window.addEventListener('mousemove', onMouseMove);
+            },
+            function (xhr) {
+                console.log('Computer: ' + (xhr.loaded / xhr.total * 100) + '% loaded');
+            },
+            function (error) {
+                console.error('An error occurred while loading the computer model:', error);
+            }
+        );
     },
     function (xhr) {
-        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+        console.log('Table: ' + (xhr.loaded / xhr.total * 100) + '% loaded');
     },
     function (error) {
-        console.error('An error occurred while loading the model:', error);
+        console.error('An error occurred while loading the table model:', error);
     }
 );
 
@@ -260,14 +286,20 @@ function onClick(event) {
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObjects(scene.children, true);
 
-    if (intersects.length > 0) {
+    // Find first non-table intersection
+    const nonTableIntersect = intersects.find(intersect => 
+        !intersect.object.userData.isTable
+    );
+
+    if (nonTableIntersect) {
         isAnimating = true;
         animationStartTime = performance.now();
         isZoomedIn = !isZoomedIn;
         
-        // Only start boot animation if it hasn't started yet
-        if (isZoomedIn && bootupProgress === 0) {
+        if (isZoomedIn && !isBooting) {
             isBooting = true;
+            bootupSound.currentTime = 0;
+            bootupSound.play();
         }
     }
 }
@@ -280,10 +312,20 @@ function onMouseMove(event) {
     const intersects = raycaster.intersectObjects(scene.children, true);
 
     if (intersects.length > 0) {
-        const object = intersects[0].object;
-        if (!object.userData.isScreen) {
-            selectedObject = object;
-            outlinePass.selectedObjects = [selectedObject];
+        // Find first non-table intersection
+        const nonTableIntersect = intersects.find(intersect => 
+            !intersect.object.userData.isTable
+        );
+
+        if (nonTableIntersect) {
+            const object = nonTableIntersect.object;
+            if (!object.userData.isScreen) {
+                selectedObject = object;
+                outlinePass.selectedObjects = [selectedObject];
+            } else {
+                selectedObject = null;
+                outlinePass.selectedObjects = [];
+            }
         } else {
             selectedObject = null;
             outlinePass.selectedObjects = [];
@@ -323,10 +365,13 @@ function animate(currentTime) {
     
     // Update bootup animation
     if (isBooting && bootupProgress < 1) {
-        bootupProgress += 0.01; // Slower progress
+        // Calculate progress based on audio time, but complete slightly before audio ends
+        const progress = (bootupSound.currentTime / bootupSound.duration) * 1.2; // Complete 20% faster than audio
+        bootupProgress = Math.min(progress, 1);
+        
         if (bootupProgress >= 1) {
             bootupProgress = 1;
-            // Don't reset isBooting, let it stay visible
+            isBooting = false;
         }
         updateBootScreen();
     }
@@ -345,17 +390,43 @@ window.addEventListener('resize', () => {
     outlinePass.resolution.set(window.innerWidth, window.innerHeight);
 });
 
-// Add keyboard event listener for terminal input
+// Handle keyboard input for terminal
 window.addEventListener('keydown', (event) => {
-    if (bootupProgress < 1) return; // Only handle input after loading is complete
-    
-    if (event.key === 'Enter') {
-        executeCommand(currentCommand);
-    } else if (event.key === 'Backspace') {
-        currentCommand = currentCommand.slice(0, -1);
-        drawTerminal();
-    } else if (event.key.length === 1) {
-        currentCommand += event.key;
-        drawTerminal();
+    if (showTerminal) {
+        if (event.key === 'Enter') {
+            handleCommand(currentCommand);
+            currentCommand = '';
+        } else if (event.key === 'Backspace') {
+            currentCommand = currentCommand.slice(0, -1);
+        } else if (event.key.length === 1) {
+            currentCommand += event.key;
+        }
+        updateBootScreen();
     }
 });
+
+function handleCommand(cmd) {
+    switch(cmd) {
+        case 'help':
+            currentPage = 'help';
+            break;
+        case 'home':
+            currentPage = 'home';
+            break;
+        case 'clear':
+            terminalHistory.length = 0;
+            break;
+        default:
+            if (cmd) {
+                terminalHistory.push(`Unknown command: ${cmd}`);
+            }
+    }
+}
+
+// Add cursor blink
+setInterval(() => {
+    if (showTerminal) {
+        cursorVisible = !cursorVisible;
+        updateBootScreen();
+    }
+}, 500);
