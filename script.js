@@ -1,10 +1,68 @@
 // Initialize Three.js scene
 const scene = new THREE.Scene();
+// Load and set sky texture
+const skyLoader = new THREE.TextureLoader();
+const skyTexture = skyLoader.load('textures/roblox sky.jpeg');
+scene.background = skyTexture;
+
+// Create ground plane with Roblox baseplate appearance
+const textureLoader = new THREE.TextureLoader();
+const studTexture = textureLoader.load('textures/roblox stud.png', function(texture) {
+    // Once texture is loaded, ensure it's using the correct color space
+    texture.colorSpace = THREE.SRGBColorSpace;
+    groundMaterial.needsUpdate = true;
+});
+
+// Make the texture repeat many times
+studTexture.wrapS = THREE.RepeatWrapping;
+studTexture.wrapT = THREE.RepeatWrapping;
+studTexture.repeat.set(50, 50); // Repeat the texture 50x50 times
+studTexture.encoding = THREE.sRGBEncoding;
+
+const groundGeometry = new THREE.PlaneGeometry(100, 100);
+const groundMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0xCCCCCC, // Lighter grey to allow texture to show better
+    map: studTexture,
+    roughness: 0.5,
+    metalness: 0.1,
+    normalScale: new THREE.Vector2(1, 1)
+});
+
+const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -1.4;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Adjust lighting for better texture visibility
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); // Increased ambient light
+scene.add(ambientLight);
+
+// Adjust sunlight for better texture visibility
+const sunLight = new THREE.DirectionalLight(0xffffff, 1.5); // Increased intensity
+sunLight.position.set(5, 10, 5);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.width = 2048;
+sunLight.shadow.mapSize.height = 2048;
+sunLight.shadow.camera.near = 0.5;
+sunLight.shadow.camera.far = 50;
+sunLight.shadow.camera.left = -10;
+sunLight.shadow.camera.right = 10;
+sunLight.shadow.camera.top = 10;
+sunLight.shadow.camera.bottom = -10;
+scene.add(sunLight);
+
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ 
     antialias: true,
     powerPreference: "low-power"
 });
+
+// Enable shadow mapping
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1;
 
 // Create audio element for boot sound
 const bootupSound = new Audio('sounds/computer bootup.mp3');
@@ -21,6 +79,15 @@ const composer = new THREE.EffectComposer(renderer);
 const renderPass = new THREE.RenderPass(scene, camera);
 composer.addPass(renderPass);
 
+// Add bloom effect for light rays
+const bloomPass = new THREE.UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    0.5,  // bloom strength
+    0.4,  // radius
+    0.85  // threshold
+);
+composer.addPass(bloomPass);
+
 // Add outline pass for glow effect
 const outlinePass = new THREE.OutlinePass(
     new THREE.Vector2(window.innerWidth, window.innerHeight),
@@ -34,17 +101,96 @@ outlinePass.visibleEdgeColor.set(0xffffff);
 outlinePass.hiddenEdgeColor.set(0xffffff);
 composer.addPass(outlinePass);
 
-// Add lighting with reduced intensity
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-scene.add(ambientLight);
+// Create volumetric light cone geometry
+function createLightCone(position) {
+    const coneGeometry = new THREE.CylinderGeometry(0.1, 0.5, 2, 32, 20, true);
+    const coneMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffffee,
+        transparent: true,
+        opacity: 0.1,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+    });
+    const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+    cone.position.copy(position);
+    cone.rotation.x = Math.PI;
+    return cone;
+}
 
-const frontLight = new THREE.PointLight(0xffffff, 0.3);
-frontLight.position.set(2, 2, 5);
+// Create pendant lamp geometry
+function createPendantLamp(position) {
+    const lampGroup = new THREE.Group();
+    
+    // Create the cable
+    const cableGeometry = new THREE.CylinderGeometry(0.01, 0.01, 2, 8);
+    const cableMaterial = new THREE.MeshStandardMaterial({ color: 0x202020 });
+    const cable = new THREE.Mesh(cableGeometry, cableMaterial);
+    cable.position.y = 1;
+    
+    // Create the lamp shade
+    const shadeGeometry = new THREE.ConeGeometry(0.2, 0.3, 32, 1, true);
+    const shadeMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x303030,
+        side: THREE.DoubleSide,
+        metalness: 0.8,
+        roughness: 0.2
+    });
+    const shade = new THREE.Mesh(shadeGeometry, shadeMaterial);
+    shade.position.y = 0;
+    
+    // Create the light bulb (visible)
+    const bulbGeometry = new THREE.SphereGeometry(0.05, 16, 16);
+    const bulbMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xffffee,
+        emissive: 0xffffee,
+        emissiveIntensity: 2
+    });
+    const bulb = new THREE.Mesh(bulbGeometry, bulbMaterial);
+    bulb.position.y = 0;
+    
+    // Create the actual light source
+    const light = new THREE.SpotLight(0xffffee, 3);
+    light.position.set(0, 0, 0);
+    light.angle = Math.PI / 4;
+    light.penumbra = 0.5;
+    light.decay = 1.5;
+    light.distance = 10;
+    light.castShadow = true;
+    
+    // Improve shadow quality
+    light.shadow.mapSize.width = 1024;
+    light.shadow.mapSize.height = 1024;
+    light.shadow.camera.near = 0.1;
+    light.shadow.camera.far = 10;
+    light.shadow.focus = 1;
+    
+    // Add volumetric light cone
+    const lightCone = createLightCone(new THREE.Vector3(0, 0, 0));
+    
+    // Add all elements to the group
+    lampGroup.add(cable);
+    lampGroup.add(shade);
+    lampGroup.add(bulb);
+    lampGroup.add(light);
+    lampGroup.add(lightCone);
+    
+    // Position the entire lamp
+    lampGroup.position.copy(position);
+    
+    return lampGroup;
+}
+
+// Create and add pendant lamps
+const lamp1 = createPendantLamp(new THREE.Vector3(-1, 3, 0));
+const lamp2 = createPendantLamp(new THREE.Vector3(1, 3, 0));
+scene.add(lamp1);
+scene.add(lamp2);
+
+// Add a subtle front light for the screen
+const frontLight = new THREE.DirectionalLight(0xffffff, 0.2);
+frontLight.position.set(0, 1, 2);
+frontLight.castShadow = false; // Don't cast shadows from this light
 scene.add(frontLight);
-
-const backLight = new THREE.PointLight(0xffffff, 0.3);
-backLight.position.set(-2, 2, -5);
-scene.add(backLight);
 
 // Create screen texture and material
 const screenCanvas = document.createElement('canvas');
@@ -181,8 +327,8 @@ const cameraStates = {
         lookAt: new THREE.Vector3(0, 0, 0)
     },
     zoomedIn: {
-        position: new THREE.Vector3(0.11, 0.7, 1.4),
-        lookAt: new THREE.Vector3(0.11, 0.6, 0)
+        position: new THREE.Vector3(0.05, 0.4, 0.32),
+        lookAt: new THREE.Vector3(0.05, 0.4, 0)
     }
 };
 
@@ -207,15 +353,27 @@ tableLoader.load(
         const center = box.getCenter(new THREE.Vector3());
         table.position.sub(center);
         
-        // Scale the table
+        // Scale the table - calculate base scale
         const size = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 2.0 / maxDim;
-        table.scale.multiplyScalar(scale);
+        const baseScale = 1.5 / maxDim; // Reduced from 1.9 to make table smaller
+        
+        // Apply wider scale for length and width, keep height at base scale
+        table.scale.set(
+            baseScale * 1.5,  // length - 50% wider
+            baseScale,        // height - keep original
+            baseScale * 1.5   // width - 50% wider
+        );
 
-        // Mark table as non-interactive
+        // Move table back and center
+        table.position.z -= 0.5; // Move table back
+        table.position.x = 0; // Center horizontally
+
+        // Enable shadows for the table
         table.traverse((child) => {
             if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
                 child.userData.isTable = true;
             }
         });
@@ -237,16 +395,22 @@ tableLoader.load(
                 // Scale the computer
                 const computerSize = computerBox.getSize(new THREE.Vector3());
                 const computerMaxDim = Math.max(computerSize.x, computerSize.y, computerSize.z);
-                const computerScale = 2.5 / computerMaxDim;
+                const computerScale = 2.0 / computerMaxDim;
                 computer.scale.multiplyScalar(computerScale);
 
-                // Position table below computer instead of moving computer
-                const tableHeight = size.y * scale;
+                // Position table below computer
+                const tableHeight = size.y * baseScale;
                 table.position.y = computer.position.y - (tableHeight / 2) - (computerSize.y * computerScale / 2);
 
-                // Apply materials settings to computer
+                // Center computer horizontally and move back
+                computer.position.x = 0;
+                computer.position.z -= 0.8; // Move computer back to match table
+
+                // Enable shadows for the computer
                 computer.traverse((child) => {
                     if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
                         child.material.metalness = 0.3;
                         child.material.roughness = 0.7;
                         if (child.name.toLowerCase().includes('screen') || 
@@ -286,17 +450,17 @@ function onClick(event) {
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObjects(scene.children, true);
 
-    // Find first non-table intersection
-    const nonTableIntersect = intersects.find(intersect => 
-        !intersect.object.userData.isTable
+    // Find first intersection with a screen mesh
+    const screenIntersect = intersects.find(intersect => 
+        intersect.object.userData.isScreen
     );
 
-    if (nonTableIntersect) {
+    if (screenIntersect) {
         isAnimating = true;
         animationStartTime = performance.now();
         isZoomedIn = !isZoomedIn;
         
-        if (isZoomedIn && !isBooting) {
+        if (isZoomedIn && bootupProgress === 0 && !isBooting) {
             isBooting = true;
             bootupSound.currentTime = 0;
             bootupSound.play();
@@ -311,25 +475,13 @@ function onMouseMove(event) {
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObjects(scene.children, true);
 
-    if (intersects.length > 0) {
-        // Find first non-table intersection
-        const nonTableIntersect = intersects.find(intersect => 
-            !intersect.object.userData.isTable
-        );
+    const screenIntersect = intersects.find(intersect => 
+        intersect.object.userData.isScreen
+    );
 
-        if (nonTableIntersect) {
-            const object = nonTableIntersect.object;
-            if (!object.userData.isScreen) {
-                selectedObject = object;
-                outlinePass.selectedObjects = [selectedObject];
-            } else {
-                selectedObject = null;
-                outlinePass.selectedObjects = [];
-            }
-        } else {
-            selectedObject = null;
-            outlinePass.selectedObjects = [];
-        }
+    if (screenIntersect) {
+        selectedObject = screenIntersect.object;
+        outlinePass.selectedObjects = [selectedObject];
     } else {
         selectedObject = null;
         outlinePass.selectedObjects = [];
