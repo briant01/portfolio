@@ -252,26 +252,14 @@ let cursorVisible = true;
 let currentPage = 'home';
 const terminalHistory = [];
 
-// Terminal content
+// Get terminal content from HTML data attributes
+const modelContainer = document.getElementById('model-container');
 const terminalPages = {
-    home: `
-Brian Tram's Portfolio
-===================================
-Type 'help' to see available commands.
-
-`,
-    help: `
-Available Commands
-================
-help     - Show this help menu
-home     - Return to home page
-clear    - Clear terminal
-about    - About me
-projects - View my projects
-contact  - Contact information
-
-Type a command and press Enter.
-`
+    home: modelContainer.dataset.terminalHome,
+    help: modelContainer.dataset.terminalHelp,
+    about: modelContainer.dataset.terminalAbout,
+    projects: modelContainer.dataset.terminalProjects,
+    contact: modelContainer.dataset.terminalContact
 };
 
 function updateBootScreen() {
@@ -726,6 +714,15 @@ function handleCommand(cmd) {
             break;
         case 'clear':
             terminalHistory.length = 0;
+            break;
+        case 'about':
+            currentPage = 'about';
+            break;
+        case 'projects':
+            currentPage = 'projects';
+            break;
+        case 'contact':
+            currentPage = 'contact';
             break;
         default:
             if (cmd) {
