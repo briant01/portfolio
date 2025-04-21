@@ -67,6 +67,40 @@ renderer.toneMappingExposure = 1.1; // Slightly increased exposure
 // Create audio element for boot sound
 const bootupSound = new Audio('sounds/computer bootup.mp3');
 
+// Create audio elements for typing sounds
+const baseKeyboardSound = new Audio('sounds/old keyboard.mp3');
+baseKeyboardSound.volume = 0.4;
+
+// Create pitched versions of the keyboard sound with varied volumes
+const keyboardSounds = [
+    { pitch: 1, volume: 0.35 },     // Normal pitch, medium-loud
+    { pitch: 1.1, volume: 0.45 },   // Higher pitch, loudest
+    { pitch: 0.9, volume: 0.3 },    // Lower pitch, quieter
+    { pitch: 0.95, volume: 0.4 }    // Between normal and low, medium-loud
+];
+
+// Function to play random typing sound with slight random volume variation
+function playRandomTypeSound() {
+    const soundConfig = keyboardSounds[Math.floor(Math.random() * keyboardSounds.length)];
+    const sound = new Audio('sounds/old keyboard.mp3');
+    sound.preservesPitch = false;
+    sound.playbackRate = soundConfig.pitch;
+    // Add slight random variation to volume (-10% to +10%)
+    const volumeVariation = 1 + (Math.random() * 0.2 - 0.1);
+    sound.volume = Math.min(1, soundConfig.volume * volumeVariation);
+    
+    // Ensure the sound plays
+    const playPromise = sound.play();
+    if (playPromise !== undefined) {
+        playPromise.catch(error => {
+            console.log("Audio play failed:", error);
+        });
+    }
+}
+
+// Create audio context for keyboard sounds
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
 // Set up renderer
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(0x000000);
@@ -546,10 +580,23 @@ window.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
             handleCommand(currentCommand);
             currentCommand = '';
+            // Play enter key with lower pitch and higher volume
+            const sound = new Audio('sounds/old keyboard.mp3');
+            sound.preservesPitch = false;
+            sound.playbackRate = 0.8;
+            sound.volume = 0.5; // Louder for enter key
+            sound.play();
         } else if (event.key === 'Backspace') {
             currentCommand = currentCommand.slice(0, -1);
+            // Play backspace with slightly different pitch
+            const sound = new Audio('sounds/old keyboard.mp3');
+            sound.preservesPitch = false;
+            sound.playbackRate = 0.85;
+            sound.volume = 0.45; // Slightly louder than normal keys
+            sound.play();
         } else if (event.key.length === 1) {
             currentCommand += event.key;
+            playRandomTypeSound();
         }
         updateBootScreen();
     }
