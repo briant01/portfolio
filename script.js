@@ -357,8 +357,8 @@ const cameraStates = {
         lookAt: new THREE.Vector3(0, 0, 0)
     },
     zoomedIn: {
-        position: new THREE.Vector3(0.05, 0.4, 0.1),
-        lookAt: new THREE.Vector3(0.05, 0.4, 0)
+        position: new THREE.Vector3(0.035, 0.4, 0.1),
+        lookAt: new THREE.Vector3(0.035, 0.4, 0)  // Look slightly forward from the camera position
     }
 };
 
@@ -548,8 +548,12 @@ function animateCamera(currentTime) {
         
         // Animate to zoomed position
         camera.position.lerpVectors(lastOrbitalState.position, cameraStates.zoomedIn.position, eased);
+        
+        // Create a smooth lookAt transition that maintains the same viewing direction
+        const startLookAt = new THREE.Vector3(0, 0, 0);
+        const endLookAt = cameraStates.zoomedIn.lookAt;
         const currentLookAt = new THREE.Vector3();
-        currentLookAt.lerpVectors(new THREE.Vector3(0, 0, 0), cameraStates.zoomedIn.lookAt, eased);
+        currentLookAt.lerpVectors(startLookAt, endLookAt, eased);
         camera.lookAt(currentLookAt);
     } else {
         // Zooming out - restore orbital state
