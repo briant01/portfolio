@@ -16,12 +16,12 @@ const studTexture = textureLoader.load('textures/roblox stud.png', function(text
 // Make the texture repeat many times
 studTexture.wrapS = THREE.RepeatWrapping;
 studTexture.wrapT = THREE.RepeatWrapping;
-studTexture.repeat.set(50, 50); // Repeat the texture 50x50 times
+studTexture.repeat.set(50, 50);
 studTexture.encoding = THREE.sRGBEncoding;
 
 const groundGeometry = new THREE.PlaneGeometry(100, 100);
 const groundMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0xCCCCCC, // Lighter grey to allow texture to show better
+    color: 0xCCCCCC,
     map: studTexture,
     roughness: 0.5,
     metalness: 0.1,
@@ -34,12 +34,12 @@ ground.position.y = -1.4;
 ground.receiveShadow = true;
 scene.add(ground);
 
-// Adjust lighting for better texture visibility
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.2); // Increased from 0.8 to 1.2
+// Adjust lighting for better visibility
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.5); // Increased ambient light
 scene.add(ambientLight);
 
-// Adjust sunlight for better texture visibility
-const sunLight = new THREE.DirectionalLight(0xffffff, 2.0); // Increased intensity
+// Adjust sunlight for better visibility
+const sunLight = new THREE.DirectionalLight(0xffffff, 2.5); // Increased intensity
 sunLight.position.set(5, 10, 5);
 sunLight.castShadow = true;
 sunLight.shadow.mapSize.width = 2048;
@@ -62,7 +62,7 @@ const renderer = new THREE.WebGLRenderer({
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1;
+renderer.toneMappingExposure = 1.1; // Slightly increased exposure
 
 // Create audio element for boot sound
 const bootupSound = new Audio('sounds/computer bootup.mp3');
