@@ -63,8 +63,8 @@ const cameraStates = {
         lookAt: new THREE.Vector3(0, 0, 0)
     },
     zoomedIn: {
-        position: new THREE.Vector3(0, 0.5, 1.5),
-        lookAt: new THREE.Vector3(0, 0.3, 0)
+        position: new THREE.Vector3(0.11, 0.6, 1.5),
+        lookAt: new THREE.Vector3(0.11, 0.6, 0)
     }
 };
 
