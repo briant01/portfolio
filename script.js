@@ -916,3 +916,171 @@ setInterval(() => {
         updateBootScreen();
     }
 }, 500);
+
+// Create UI elements
+function createUIElements() {
+    // Create Goku icon button (separate)
+    const gokuButton = document.createElement('button');
+    gokuButton.style.cssText = `
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        width: 40px;
+        height: 40px;
+        background: rgba(0, 0, 0, 0.8);
+        border: none;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 1000;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+        padding: 0;
+    `;
+    gokuButton.innerHTML = `
+        <div class="hover-circle"></div>
+        <img src="textures/goku icon.webp" style="width: 28px; height: 28px; border-radius: 50%;">
+    `;
+
+    // Create container div for the menu/chat button group
+    const buttonGroup = document.createElement('div');
+    buttonGroup.style.cssText = `
+        position: fixed;
+        top: 10px;
+        left: 58px;
+        display: flex;
+        background: rgba(0, 0, 0, 0.8);
+        border-radius: 50px;
+        padding: 0;
+        z-index: 1000;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        height: 40px;
+        width: 88px;
+    `;
+
+    // Create menu button
+    const menuButton = document.createElement('button');
+    menuButton.innerHTML = `
+        <div class="hover-circle"></div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 12h18M3 6h18M3 18h18" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+    `;
+    menuButton.style.cssText = `
+        position: relative;
+        background: transparent;
+        border: none;
+        padding: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 40px;
+        transition: background 0.2s;
+        border-radius: 50px 0 0 50px;
+        overflow: hidden;
+    `;
+
+    // Create chat button
+    const chatButton = document.createElement('button');
+    chatButton.innerHTML = `
+        <div class="hover-circle"></div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    `;
+    chatButton.style.cssText = `
+        position: relative;
+        background: transparent;
+        border: none;
+        padding: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 40px;
+        transition: background 0.2s;
+        border-radius: 0 50px 50px 0;
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+        overflow: hidden;
+    `;
+
+    // Add styles for hover circle
+    const style = document.createElement('style');
+    style.textContent = `
+        .hover-circle {
+            position: absolute;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0);
+            transition: background 0.2s, transform 0.2s;
+            transform: scale(0);
+        }
+        button:hover .hover-circle {
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1);
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Add hover effects
+    const addHoverEffect = (button) => {
+        button.addEventListener('mouseover', () => {
+            const circle = button.querySelector('.hover-circle');
+            circle.style.transform = 'scale(1)';
+        });
+        button.addEventListener('mouseout', () => {
+            const circle = button.querySelector('.hover-circle');
+            circle.style.transform = 'scale(0)';
+        });
+    };
+
+    addHoverEffect(gokuButton);
+    addHoverEffect(menuButton);
+    addHoverEffect(chatButton);
+
+    // Add click handlers
+    gokuButton.addEventListener('click', () => {
+        console.log('Goku clicked');
+        // Add your Goku button functionality here
+    });
+
+    menuButton.addEventListener('click', () => {
+        console.log('Menu clicked');
+        // Add your menu functionality here
+    });
+
+    chatButton.addEventListener('click', () => {
+        console.log('Chat clicked');
+        // Add your chat functionality here
+    });
+
+    // Remove any existing UI elements first
+    const existingUI = document.querySelectorAll('.ui-element, .ui-container, .logo, .button-container, .ui-button');
+    existingUI.forEach(element => element.remove());
+
+    // Add classes for easy removal later
+    gokuButton.classList.add('ui-element');
+    buttonGroup.classList.add('ui-element');
+
+    // Append buttons
+    buttonGroup.appendChild(menuButton);
+    buttonGroup.appendChild(chatButton);
+    document.body.appendChild(gokuButton);
+    document.body.appendChild(buttonGroup);
+}
+
+// Call createUIElements after the scene is set up
+document.addEventListener('DOMContentLoaded', () => {
+    // Remove any existing UI elements first
+    const existingUI = document.querySelectorAll('.ui-element, .ui-container, .logo, .button-container, .ui-button');
+    existingUI.forEach(element => element.remove());
+    
+    // Create new UI
+    createUIElements();
+});
