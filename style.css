@@ -17,18 +17,18 @@ html, body {
 
 .ui-container {
     position: fixed;
-    top: 8px;
-    left: 8px;
+    top: 4px;
+    left: 4px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     z-index: 1000;
     pointer-events: none;
 }
 
 .logo {
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
     background: rgba(0, 0, 0, 0.6);
     border-radius: 50%;
     display: flex;
@@ -38,19 +38,19 @@ html, body {
 }
 
 .logo img {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
 }
 
 .button-container {
     display: flex;
-    gap: 8px;
+    gap: 6px;
 }
 
 .ui-button {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     background: rgba(0, 0, 0, 0.6);
     border: none;
     border-radius: 50%;

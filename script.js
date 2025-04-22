@@ -923,10 +923,10 @@ function createUIElements() {
     const gokuButton = document.createElement('button');
     gokuButton.style.cssText = `
         position: fixed;
-        top: 10px;
-        left: 10px;
-        width: 40px;
-        height: 40px;
+        top: 11px;
+        left: 15px;
+        width: 45px;
+        height: 45px;
         background: rgba(0, 0, 0, 0.8);
         border: none;
         border-radius: 50%;
@@ -941,30 +941,30 @@ function createUIElements() {
     `;
     gokuButton.innerHTML = `
         <div class="hover-circle"></div>
-        <img src="textures/goku icon.webp" style="width: 28px; height: 28px; border-radius: 50%;">
+        <img src="textures/goku icon.webp" style="width: 36px; height: 36px; border-radius: 50%;">
     `;
 
     // Create container div for the menu/chat button group
     const buttonGroup = document.createElement('div');
     buttonGroup.style.cssText = `
         position: fixed;
-        top: 10px;
-        left: 58px;
+        top: 11px;
+        left: 68px;
         display: flex;
         background: rgba(0, 0, 0, 0.8);
         border-radius: 50px;
         padding: 0;
         z-index: 1000;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-        height: 40px;
-        width: 88px;
+        height: 45px;
+        width: 96px;
     `;
 
     // Create menu button
     const menuButton = document.createElement('button');
     menuButton.innerHTML = `
         <div class="hover-circle"></div>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3 12h18M3 6h18M3 18h18" stroke="white" stroke-width="2" stroke-linecap="round"/>
         </svg>
     `;
@@ -972,13 +972,13 @@ function createUIElements() {
         position: relative;
         background: transparent;
         border: none;
-        padding: 8px;
+        padding: 12px;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 44px;
-        height: 40px;
+        width: 53px;
+        height: 48px;
         transition: background 0.2s;
         border-radius: 50px 0 0 50px;
         overflow: hidden;
@@ -988,7 +988,7 @@ function createUIElements() {
     const chatButton = document.createElement('button');
     chatButton.innerHTML = `
         <div class="hover-circle"></div>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
     `;
@@ -996,18 +996,133 @@ function createUIElements() {
         position: relative;
         background: transparent;
         border: none;
-        padding: 8px;
+        padding: 12px;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 44px;
-        height: 40px;
+        width: 53px;
+        height: 48px;
         transition: background 0.2s;
         border-radius: 0 50px 50px 0;
-        border-left: 1px solid rgba(255, 255, 255, 0.1);
         overflow: hidden;
     `;
+
+    // Create player list widget
+    const playerList = document.createElement('div');
+    playerList.style.cssText = `
+        position: fixed;
+        top: 5.7%;
+        right: 5px;
+        background: rgba(50, 60, 70, 0.95);
+        border-radius: 8px;
+        padding: 8px 12px;
+        z-index: 1000;
+        width: 165px; /* Set explicit width */
+        height: 64px; /* Set explicit height */
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        transform-origin: right;
+    `;
+
+    // Create header container
+    const headerContainer = document.createElement('div');
+    headerContainer.style.cssText = `
+        display: flex;
+        margin-bottom: 4px;
+    `;
+
+    // Create close button
+    const closeButton = document.createElement('button');
+    closeButton.style.cssText = `
+        background: transparent;
+        border: none;
+        color: #8b8b8b;
+        cursor: pointer;
+        padding: 2px;
+        font-size: 16px;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: -2px;
+    `;
+    closeButton.innerHTML = '×';
+
+    // Create player entry container
+    const playerEntry = document.createElement('div');
+    playerEntry.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 0;
+    `;
+
+    // Create player icon
+    const playerIcon = document.createElement('div');
+    playerIcon.style.cssText = `
+        width: 24px;
+        height: 24px;
+        background: #5F6368;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: Arial, sans-serif;
+        font-size: 12px;
+        color: white;
+        text-transform: uppercase;
+    `;
+    playerIcon.textContent = 'B';
+
+    // Create player name
+    const playerName = document.createElement('span');
+    playerName.style.cssText = `
+        color: white;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        font-weight: 400;
+    `;
+    playerName.textContent = 'brian';
+
+    // Assemble all elements
+    headerContainer.appendChild(closeButton);
+    playerEntry.appendChild(playerIcon);
+    playerEntry.appendChild(playerName);
+    playerList.appendChild(headerContainer);
+    playerList.appendChild(playerEntry);
+    playerList.classList.add('ui-element');
+
+    // Add Tab key toggle functionality
+    let isPlayerListVisible = true;
+    
+    function hidePlayerList() {
+        playerList.style.transform = 'translateX(calc(100% + 15px))';
+        playerList.style.opacity = '0';
+    }
+    
+    function showPlayerList() {
+        playerList.style.transform = 'translateX(0)';
+        playerList.style.opacity = '1';
+    }
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Tab') {
+            event.preventDefault(); // Prevent default tab behavior
+            isPlayerListVisible = !isPlayerListVisible;
+            if (isPlayerListVisible) {
+                showPlayerList();
+            } else {
+                hidePlayerList();
+            }
+        }
+    });
+
+    // Add click handler for close button
+    closeButton.addEventListener('click', () => {
+        isPlayerListVisible = false;
+        hidePlayerList();
+    });
 
     // Add styles for hover circle
     const style = document.createElement('style');
@@ -1068,11 +1183,12 @@ function createUIElements() {
     gokuButton.classList.add('ui-element');
     buttonGroup.classList.add('ui-element');
 
-    // Append buttons
+    // Append all UI elements
     buttonGroup.appendChild(menuButton);
     buttonGroup.appendChild(chatButton);
     document.body.appendChild(gokuButton);
     document.body.appendChild(buttonGroup);
+    document.body.appendChild(playerList);
 }
 
 // Call createUIElements after the scene is set up
