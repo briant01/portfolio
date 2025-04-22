@@ -289,20 +289,65 @@ function wrapText(context, text, x, y, maxWidth, lineHeight) {
     let posY = y;
 
     for(let n = 0; n < words.length; n++) {
-        const testLine = line + words[n] + ' ';
+        let word = words[n];
+        const spaceWidth = context.measureText(' ').width;
+        
+        // Handle long words that need to be broken up
+        while (context.measureText(word).width > maxWidth) {
+            // Find the maximum characters that can fit
+            let splitIndex = 0;
+            let testWidth = 0;
+            while (splitIndex < word.length) {
+                testWidth += context.measureText(word[splitIndex]).width;
+                if (testWidth > maxWidth) break;
+                splitIndex++;
+            }
+            
+            // If we have an existing line, draw it first
+            if (line) {
+                context.fillText(line, x, posY);
+                line = '';
+                posY += lineHeight;
+            }
+            
+            // Draw the portion of the word that fits
+            const portion = word.substring(0, splitIndex);
+            context.fillText(portion, x, posY);
+            posY += lineHeight;
+            
+            // Update word to remaining characters
+            word = word.substring(splitIndex);
+            
+            // Check if we've reached the bottom of the screen
+            if (posY > screenCanvas.height - 40) {
+                return posY;
+            }
+        }
+        
+        // Test if adding the word exceeds maxWidth
+        const testLine = line + word + ' ';
         const metrics = context.measureText(testLine);
         const testWidth = metrics.width;
         
-        if (testWidth > maxWidth && n > 0) {
+        if (testWidth > maxWidth && line !== '') {
             context.fillText(line, x, posY);
-            line = words[n] + ' ';
+            line = word + ' ';
             posY += lineHeight;
+            
+            // Check if we've reached the bottom of the screen
+            if (posY > screenCanvas.height - 40) {
+                break;
+            }
         }
         else {
             line = testLine;
         }
     }
-    context.fillText(line, x, posY);
+    
+    // Draw the last line if there's room
+    if (posY <= screenCanvas.height - 40 && line) {
+        context.fillText(line.trim(), x, posY);
+    }
     return posY;
 }
 
@@ -366,26 +411,85 @@ function updateBootScreen() {
         
         let yPos = 40;
         const lineHeight = 20;
-        const maxWidth = screenCanvas.width - 40; // Leave 20px margin on each side
+        const maxWidth = screenCanvas.width - 40;
+        const margin = 20;
         
         // Draw page content
         const pageContent = terminalContent[currentPage];
         const lines = pageContent.split('\n');
         
-        lines.forEach(line => {
-            // Skip empty lines
+        for (const line of lines) {
             if (line.trim() === '') {
                 yPos += lineHeight;
-                return;
+                continue;
             }
-            // Wrap and draw each line
-            yPos = wrapText(screenCtx, line, 20, yPos, maxWidth, lineHeight) + lineHeight;
-        });
+            yPos = wrapText(screenCtx, line, margin, yPos, maxWidth, lineHeight);
+            yPos += lineHeight;
+            
+            if (yPos > screenCanvas.height - 40) {
+                break;
+            }
+        }
 
-        // Draw command line with cursor
-        yPos += lineHeight;
-        const prompt = '> ' + currentCommand;
-        wrapText(screenCtx, prompt + (cursorVisible ? '█' : ''), 20, yPos, maxWidth, lineHeight);
+        // Handle command line with cursor
+        if (yPos <= screenCanvas.height - 40) {
+            const prompt = '> ';
+            const promptWidth = screenCtx.measureText(prompt).width;
+            
+            // Draw the prompt
+            screenCtx.fillText(prompt, margin, yPos);
+            
+            // Handle the command text wrapping
+            if (currentCommand) {
+                let remainingText = currentCommand;
+                let currentX = margin + promptWidth;
+                let currentY = yPos;
+                let lastPortionLength = 0;
+                
+                while (remainingText.length > 0) {
+                    let availableWidth = currentY === yPos ? 
+                        maxWidth - promptWidth : // First line (after prompt)
+                        maxWidth; // Subsequent lines
+                    
+                    // Find how many characters fit in the available width
+                    let fitLength = 0;
+                    let testWidth = 0;
+                    
+                    while (fitLength < remainingText.length) {
+                        testWidth += screenCtx.measureText(remainingText[fitLength]).width;
+                        if (testWidth > availableWidth) break;
+                        fitLength++;
+                    }
+                    
+                    // Draw the portion that fits
+                    const portion = remainingText.substring(0, fitLength);
+                    screenCtx.fillText(portion, currentX, currentY);
+                    lastPortionLength = portion.length;
+                    
+                    // Update remaining text and position
+                    remainingText = remainingText.substring(fitLength);
+                    if (remainingText.length > 0) {
+                        currentY += lineHeight;
+                        currentX = margin;
+                        
+                        // Check if we've hit the bottom of the screen
+                        if (currentY > screenCanvas.height - 40) break;
+                    }
+                }
+                
+                // Add cursor at the end if there's room
+                if (cursorVisible && currentY <= screenCanvas.height - 40) {
+                    // Calculate width of the last portion of text
+                    const lastPortionWidth = screenCtx.measureText(
+                        currentCommand.substring(currentCommand.length - lastPortionLength)
+                    ).width;
+                    screenCtx.fillText('█', currentX + lastPortionWidth, currentY);
+                }
+            } else if (cursorVisible) {
+                // If no command text, just draw cursor after prompt
+                screenCtx.fillText('█', margin + promptWidth, yPos);
+            }
+        }
     }
     
     screenTexture.needsUpdate = true;
@@ -539,6 +643,10 @@ function onClick(event) {
         isAnimating = true;
         animationStartTime = performance.now();
         isZoomedIn = !isZoomedIn;
+        
+        // Toggle outline pass and bloom effect based on zoom state
+        outlinePass.enabled = !isZoomedIn;
+        bloomPass.enabled = !isZoomedIn;
         
         if (isZoomedIn) {
             if (bootupProgress === 0 && !isBooting) {
@@ -777,6 +885,8 @@ window.addEventListener('keydown', (event) => {
 });
 
 function handleCommand(cmd) {
+    const maxWidth = screenCanvas.width - 40;
+    
     switch(cmd) {
         case 'help':
         case 'home':
@@ -793,6 +903,10 @@ function handleCommand(cmd) {
                 terminalHistory.push(`Unknown command: ${cmd}`);
             }
     }
+    
+    // Reset cursor position after command
+    currentCommand = '';
+    updateBootScreen();
 }
 
 // Add cursor blink
