@@ -135,26 +135,17 @@ const composer = new THREE.EffectComposer(renderer);
 const renderPass = new THREE.RenderPass(scene, camera);
 composer.addPass(renderPass);
 
-// Add bloom effect for light rays
-const bloomPass = new THREE.UnrealBloomPass(
-    new THREE.Vector2(window.innerWidth, window.innerHeight),
-    0.5,  // bloom strength
-    0.4,  // radius
-    0.85  // threshold
-);
-composer.addPass(bloomPass);
-
 // Add outline pass for glow effect
 const outlinePass = new THREE.OutlinePass(
     new THREE.Vector2(window.innerWidth, window.innerHeight),
     scene,
     camera
 );
-outlinePass.edgeStrength = 2;
-outlinePass.edgeGlow = 0.5;
-outlinePass.edgeThickness = 1;
-outlinePass.visibleEdgeColor.set(0xffffff);
-outlinePass.hiddenEdgeColor.set(0xffffff);
+outlinePass.edgeStrength = 3;
+outlinePass.edgeGlow = 1;
+outlinePass.edgeThickness = 2;
+outlinePass.visibleEdgeColor.set(0x00ffff);
+outlinePass.hiddenEdgeColor.set(0x00ffff);
 outlinePass.pulsePeriod = 0;
 outlinePass.usePatternTexture = false;
 outlinePass.depthTest = true;
@@ -590,16 +581,17 @@ tableLoader.load(
                 computer.position.x = 0;
                 computer.position.z -= 0.8; // Move computer back to match table
 
-                // Enable shadows for the computer
+                // Enable shadows and set up materials for the computer
                 computer.traverse((child) => {
                     if (child.isMesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
                         child.material.metalness = 0.3;
                         child.material.roughness = 0.7;
+                        // Tag the entire computer for interaction
+                        child.userData.isComputer = true;
                         if (child.name.toLowerCase().includes('screen') || 
                             child.material.name.toLowerCase().includes('screen')) {
-                            child.userData.isScreen = true;
                             child.material = screenMaterial;
                         }
                     }
@@ -634,19 +626,15 @@ function onClick(event) {
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObjects(scene.children, true);
 
-    // Find first intersection with a screen mesh
-    const screenIntersect = intersects.find(intersect => 
-        intersect.object.userData.isScreen
+    // Find first intersection with any computer part
+    const computerIntersect = intersects.find(intersect => 
+        intersect.object.userData.isComputer
     );
 
-    if (screenIntersect) {
+    if (computerIntersect) {
         isAnimating = true;
         animationStartTime = performance.now();
         isZoomedIn = !isZoomedIn;
-        
-        // Toggle outline pass and bloom effect based on zoom state
-        outlinePass.enabled = !isZoomedIn;
-        bloomPass.enabled = !isZoomedIn;
         
         if (isZoomedIn) {
             if (bootupProgress === 0 && !isBooting) {
@@ -665,18 +653,26 @@ function onClick(event) {
 }
 
 function onMouseMove(event) {
+    if (isZoomedIn) return; // Don't show hover effects when zoomed in
+    
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObjects(scene.children, true);
 
-    const screenIntersect = intersects.find(intersect => 
-        intersect.object.userData.isScreen
+    // Find first intersection with any computer part
+    const computerIntersect = intersects.find(intersect => 
+        intersect.object.userData.isComputer
     );
 
-    if (screenIntersect) {
-        selectedObject = screenIntersect.object;
+    if (computerIntersect) {
+        // Get the root computer object for highlighting the entire model
+        let rootObject = computerIntersect.object;
+        while (rootObject.parent && !rootObject.parent.isScene) {
+            rootObject = rootObject.parent;
+        }
+        selectedObject = rootObject;
         outlinePass.selectedObjects = [selectedObject];
     } else {
         selectedObject = null;
