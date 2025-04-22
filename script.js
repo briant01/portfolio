@@ -142,7 +142,7 @@ const outlinePass = new THREE.OutlinePass(
     camera
 );
 outlinePass.edgeStrength = 3;
-outlinePass.edgeGlow = 1;
+outlinePass.edgeGlow = 2;
 outlinePass.edgeThickness = 2;
 outlinePass.visibleEdgeColor.set(0x00ffff);
 outlinePass.hiddenEdgeColor.set(0x00ffff);
@@ -653,8 +653,13 @@ function onClick(event) {
 }
 
 function onMouseMove(event) {
-    if (isZoomedIn) return; // Don't show hover effects when zoomed in
-    
+    // Don't show hover effects when zoomed in
+    if (isZoomedIn) {
+        selectedObject = null;
+        outlinePass.selectedObjects = [];
+        return;
+    }
+
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
