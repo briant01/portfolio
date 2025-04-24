@@ -62,7 +62,7 @@ const bootSequenceText = [
 // Terminal content configuration
 const terminalContent = {
     home: "Brian Tram's Portfolio\n====================\nType 'help' to see available commands.\nType 'exit' to return to 3D view.\n",
-    help: "Available Commands\n=================\nhelp     - Show this help menu\nhome     - Return to home page\nabout    - About me\nprojects - View my projects\ncontact  - Contact information\nexit     - Return to 3D view\n",
+    help: "Available Commands\n=================\nhelp     - show this help menu\nhome     - return to home page\nabout    - about me\nprojects - view my projects\ncontact  - contact information\nexit     - return to 3D view\n",
     about: "About Me\n========\n17 — i like building and creating\n",
     projects: "My Projects\n===========\n1. portfolio\n2. school senior film\n3. tram editor (name is troll)\n",
     contact: "Contact Information\n===================\nEmail: brian.q.tram@gmail.com\nGitHub: github.com/briant01\nLinkedIn: linkedin.com/in/brian-tram/\nTwitter/X: x.com/trxm_br\n"
@@ -1671,6 +1671,6 @@ window.addEventListener('resize', () => {
     
     updateTerminalCanvasSize();
 });
-
 // Initialize terminal canvas size
 updateTerminalCanvasSize();
+
