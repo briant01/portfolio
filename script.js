@@ -304,22 +304,42 @@ const screenCanvas = document.createElement('canvas');
 const screenCtx = screenCanvas.getContext('2d');
 screenCanvas.width = 512;
 screenCanvas.height = 512;
+
+// Initialize with black screen
+screenCtx.fillStyle = 'black';
+screenCtx.fillRect(0, 0, screenCanvas.width, screenCanvas.height);
+
 const screenTexture = new THREE.CanvasTexture(screenCanvas);
+screenTexture.needsUpdate = true; // Make sure texture updates initially
+
 const screenMaterial = new THREE.MeshBasicMaterial({ 
     map: screenTexture,
-    emissive: null, // Remove emissive property
-    emissiveIntensity: 0 // Set to 0 to remove glow
+    emissive: null,
+    emissiveIntensity: 0
 });
 
+// Initialize state variables
 let bootupProgress = 0;
-let isBooting = false; // Start as false, will be triggered by click
-
-// Terminal state variables
+let isBooting = false;
 let showTerminal = false;
 let currentCommand = '';
 let cursorVisible = true;
 let currentPage = 'home';
 const terminalHistory = [];
+let currentBootLine = -1;
+let bootComplete = false;
+let zoomTransitionActive = false;
+let zoomProgress = 0;
+
+// Terminal configuration
+const terminalConfig = {
+    fontSize: '16px',
+    fontFamily: 'monospace',
+    textColor: '#ffffff',
+    backgroundColor: '#000',
+    padding: '20px',
+    lineHeight: '1.5'
+};
 
 // Get terminal content from HTML data attributes
 const modelContainer = document.getElementById('model-container');
@@ -407,21 +427,32 @@ const matrixChars = null;
 let matrixDrops = null;
 let matrixColumns = null;
 
-// Boot sequence state
-let currentBootLine = 0;
-let bootComplete = false;
-let zoomTransitionActive = false;
-let zoomProgress = 0;
-
-// Terminal configuration
-const terminalConfig = {
-    fontSize: '16px',
-    fontFamily: 'monospace',
-    textColor: '#0F0',
-    backgroundColor: '#000',
-    padding: '20px',
-    lineHeight: '1.5'
-};
+// Function to start boot sequence
+function startBootSequence() {
+    currentBootLine = -1; // Reset to -1 so first increment puts us at 0
+    bootComplete = false; // Reset boot complete flag
+    const bootDuration = bootupSound.duration * 1000; // Convert to milliseconds
+    const lineDelay = bootDuration / bootSequenceText.length;
+    
+    function displayNextLine() {
+        if (currentBootLine < bootSequenceText.length - 1) {
+            currentBootLine++;
+            updateBootScreen();
+            
+            // Schedule next line
+            if (currentBootLine < bootSequenceText.length - 1) {
+                setTimeout(displayNextLine, lineDelay);
+            } else {
+                // Last line displayed
+                bootComplete = true;
+                setTimeout(startZoomTransition, 1000);
+            }
+        }
+    }
+    
+    // Start the sequence
+    displayNextLine();
+}
 
 // Initialize terminal view
 function initTerminal() {
@@ -577,16 +608,12 @@ function zoomOut() {
 // Reset camera to original position
 function resetCamera() {
     camera.position.set(0, 2, 5);
-    camera.lookAt(0, 0, 0);
+        camera.lookAt(0, 0, 0);
 }
 
 // Modified animate function
 function animate(currentTime) {
     requestAnimationFrame(animate);
-    
-    if (!bootComplete) {
-        drawBootSequence();
-    }
     
     if (!isAnimating && !isZoomedIn) {
         // Smooth camera movement
@@ -617,8 +644,9 @@ function animate(currentTime) {
     animateCamera(currentTime);
     
     // Update bootup animation
-    if (isBooting && bootupProgress < 1) {
-        bootupProgress = Math.min((currentBootLine + 1) / bootSequenceText.length, 1);
+    if (isBooting) {
+        const progress = bootupSound.currentTime / bootupSound.duration;
+        bootupProgress = Math.min(progress, 1);
         
         if (bootupProgress >= 1) {
             bootupProgress = 1;
@@ -627,13 +655,15 @@ function animate(currentTime) {
         updateBootScreen();
     }
     
+    // Always update screen texture in animation loop
+    screenTexture.needsUpdate = true;
     composer.render();
 }
 
 // Initialize everything
 function init() {
     // Only start the animation loop, don't start bootup
-    animate();
+animate();
 }
 
 // Start only the animation when the page loads
@@ -1003,79 +1033,83 @@ function updateBootScreen() {
     screenCtx.fillStyle = 'black';
     screenCtx.fillRect(0, 0, screenCanvas.width, screenCanvas.height);
     
-    if (!showTerminal) {
-        // Set up monospace text style
-        screenCtx.font = '16px "Courier New", monospace';
-        screenCtx.fillStyle = '#ffffff';
-        
-        let yPos = 40;
-        const lineHeight = 20;
-        
-        // Draw boot sequence text
-        for (let i = 0; i <= currentBootLine; i++) {
-            const line = bootSequenceText[i];
-            if (line) {
-                if (line.header) {
-                    // Draw header if it exists
-                    screenCtx.fillStyle = '#ffffff';
-                    let text = line.header;
-                    if (line.content) {
-                        // If there's content and a header, format with colon
-                        text += ": " + line.content;
+    // Only show content if booting has started
+    if (isBooting || bootComplete) {
+        if (!showTerminal) {
+            // Set up monospace text style
+            screenCtx.font = '16px "Courier New", monospace';
+            screenCtx.fillStyle = '#ffffff';
+            
+            let yPos = 40;
+            const lineHeight = 20;
+            const maxWidth = screenCanvas.width - 40;
+            const margin = 20;
+            
+            // Draw boot sequence text with wrapping
+            for (let i = 0; i <= currentBootLine; i++) {
+                const line = bootSequenceText[i];
+                if (line) {
+                    if (line.header) {
+                        // Draw header if it exists
+                        let text = line.header;
+                        if (line.content) {
+                            // If there's content and a header, format with colon
+                            text += ": " + line.content;
+                        }
+                        yPos = wrapText(screenCtx, text, margin, yPos, maxWidth, lineHeight);
+                    } else {
+                        // Draw content only
+                        yPos = wrapText(screenCtx, line.content, margin, yPos, maxWidth, lineHeight);
                     }
-                    screenCtx.fillText(text, 20, yPos);
-                } else {
-                    // Draw content only
-                    screenCtx.fillText(line.content, 20, yPos);
+                    yPos += lineHeight;
                 }
-                yPos += lineHeight;
             }
-        }
 
-        if (bootupProgress >= 1) {
-            setTimeout(() => {
-                showTerminal = true;
-                currentPage = 'home';
-                enterTerminalSound.currentTime = 0;
-                enterTerminalSound.play();
-                updateBootScreen();
-            }, 1000);
-        }
-    } else {
-        // Draw terminal interface
-        screenCtx.font = '16px "Courier New", monospace';
-        screenCtx.fillStyle = '#ffffff';
-        
-        let yPos = 40;
-        const lineHeight = 20;
-        const maxWidth = screenCanvas.width - 40;
-        const margin = 20;
-        
-        // Draw page content
-        const pageContent = terminalContent[currentPage];
-        const lines = pageContent.split('\n');
-        
-        for (const line of lines) {
-            if (line.trim() === '') {
+            if (bootupProgress >= 1 && !showTerminal) {
+                setTimeout(() => {
+                    showTerminal = true;
+                    currentPage = 'home';
+                    enterTerminalSound.currentTime = 0;
+                    enterTerminalSound.play();
+                    updateBootScreen();
+                }, 1000);
+            }
+        } else {
+            // Draw terminal interface
+            screenCtx.font = '16px "Courier New", monospace';
+            screenCtx.fillStyle = '#ffffff';
+            
+            let yPos = 40;
+            const lineHeight = 20;
+            const maxWidth = screenCanvas.width - 40;
+            const margin = 20;
+            
+            // Draw page content
+            const pageContent = terminalContent[currentPage];
+            const lines = pageContent.split('\n');
+            
+            for (const line of lines) {
+                if (line.trim() === '') {
+                    yPos += lineHeight;
+                    continue;
+                }
+                yPos = wrapText(screenCtx, line, margin, yPos, maxWidth, lineHeight);
                 yPos += lineHeight;
-                continue;
+                
+                if (yPos > screenCanvas.height - 40) {
+                    break;
+                }
             }
-            yPos = wrapText(screenCtx, line, margin, yPos, maxWidth, lineHeight);
-            yPos += lineHeight;
-            
-            if (yPos > screenCanvas.height - 40) {
-                break;
-            }
-        }
 
-        // Handle command line with cursor
-        if (yPos <= screenCanvas.height - 40) {
-            const prompt = '> ';
-            screenCtx.fillText(prompt + currentCommand, margin, yPos);
-            
-            if (cursorVisible) {
-                const promptWidth = screenCtx.measureText(prompt + currentCommand).width;
-                screenCtx.fillText('█', margin + promptWidth, yPos);
+            // Handle command line with cursor
+            if (yPos <= screenCanvas.height - 40) {
+                const prompt = '> ';
+                screenCtx.fillText(prompt + currentCommand, margin, yPos);
+                
+                if (cursorVisible) {
+                    const promptWidth = screenCtx.measureText(prompt + currentCommand).width;
+                    screenCtx.fillText('█', margin + promptWidth, yPos);
+                }
             }
         }
     }
@@ -1247,12 +1281,12 @@ function onClick(event) {
         isZoomedIn = !isZoomedIn;
         
         if (isZoomedIn) {
-            if (bootupProgress === 0 && !isBooting) {
+            if (!isBooting && !bootComplete) {
                 isBooting = true;
                 bootupSound.currentTime = 0;
                 bootupSound.play();
                 startBootSequence();
-            } else if (bootupProgress >= 1) {
+            } else if (bootComplete) {
                 enterTerminalSound.currentTime = 0;
                 enterTerminalSound.play();
             }
@@ -1405,29 +1439,3 @@ document.addEventListener('dragstart', (event) => {
         event.preventDefault();
     }
 });
-
-// Function to start boot sequence
-function startBootSequence() {
-    currentBootLine = -1; // Start at -1 so first increment puts us at 0
-    const bootDuration = bootupSound.duration * 1000; // Convert to milliseconds
-    const lineDelay = bootDuration / bootSequenceText.length;
-    
-    function displayNextLine() {
-        if (currentBootLine < bootSequenceText.length - 1) {
-            currentBootLine++;
-            updateBootScreen();
-            
-            // Schedule next line
-            if (currentBootLine < bootSequenceText.length - 1) {
-                setTimeout(displayNextLine, lineDelay);
-            } else {
-                // Last line displayed
-                bootComplete = true;
-                setTimeout(startZoomTransition, 1000);
-            }
-        }
-    }
-    
-    // Start the sequence
-    displayNextLine();
-}
