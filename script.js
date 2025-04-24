@@ -624,21 +624,125 @@ function resetCamera() {
         camera.lookAt(0, 0, 0);
 }
 
-// Modified animate function
+// Add animation state tracking
+let currentCameraAnimation = null;
+
+// Modify startZoomOut to handle animation state properly
+function startZoomOut() {
+    // Cancel any existing camera animation
+    if (currentCameraAnimation) {
+        cancelAnimationFrame(currentCameraAnimation);
+        currentCameraAnimation = null;
+    }
+
+    isZoomedIn = false;
+    isAnimating = true;
+    isDragging = false;
+    
+    // Save current terminal state but clear the current command
+    lastTerminalState = {
+        page: currentPage,
+        command: '',
+        history: [...terminalHistory]
+    };
+    currentCommand = '';
+    
+    const startTime = performance.now();
+    const duration = zoomDuration;
+    
+    // Store initial camera position and calculate end position
+    const startPosition = camera.position.clone();
+    const endPosition = new THREE.Vector3(
+        Math.sin(lastOrbitalState.rotationX) * orbitRadius,
+        2 + Math.sin(lastOrbitalState.rotationY) * 2,
+        Math.cos(lastOrbitalState.rotationX) * orbitRadius
+    );
+    
+    function animate() {
+        const elapsed = performance.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        
+        // Fade out terminal
+        if (progress <= 0.5) {
+            const fadeProgress = 1 - (progress * 2);
+            terminalContainer.style.opacity = fadeProgress;
+        }
+        
+        // Smooth camera transition
+        camera.position.lerpVectors(startPosition, endPosition, eased);
+        camera.lookAt(0, 0, 0);
+        
+        if (progress < 1) {
+            currentCameraAnimation = requestAnimationFrame(animate);
+        } else {
+            currentCameraAnimation = null;
+            isAnimating = false;
+            showTerminal = false;
+            terminalContainer.style.pointerEvents = 'none';
+            
+            // Ensure camera is at final position
+            camera.position.copy(endPosition);
+            camera.lookAt(0, 0, 0);
+            
+            // Restore orbital camera controls
+            currentRotationX = lastOrbitalState.rotationX;
+            currentRotationY = lastOrbitalState.rotationY;
+            targetRotationX = lastOrbitalState.rotationX;
+            targetRotationY = lastOrbitalState.rotationY;
+        }
+    }
+    
+    currentCameraAnimation = requestAnimationFrame(animate);
+}
+
+// Modify transitionToFrontView to handle animation state
+function transitionToFrontView() {
+    // Cancel any existing camera animation
+    if (currentCameraAnimation) {
+        cancelAnimationFrame(currentCameraAnimation);
+        currentCameraAnimation = null;
+    }
+
+    const startTime = performance.now();
+    const duration = zoomDuration * 0.5;
+    
+    function animate() {
+        const elapsed = performance.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        
+        camera.position.lerpVectors(
+            camera.position,
+            cameraStates.frontView.position,
+            eased
+        );
+        camera.lookAt(cameraStates.frontView.lookAt);
+        
+        if (progress < 1) {
+            currentCameraAnimation = requestAnimationFrame(animate);
+        } else {
+            currentCameraAnimation = null;
+            startZoomIn();
+        }
+    }
+    
+    currentCameraAnimation = requestAnimationFrame(animate);
+}
+
+// Modify animate function to respect animation state
 function animate(currentTime) {
     requestAnimationFrame(animate);
     
-    if (!isAnimating && !isZoomedIn) {
-        // Smooth camera movement
+    // Only apply orbital movement when no animation is running
+    if (!currentCameraAnimation && !isZoomedIn) {
         currentRotationX += (targetRotationX - currentRotationX) * orbitSpeed;
         currentRotationY += (targetRotationY - currentRotationY) * orbitSpeed;
 
-        // Calculate camera position on a sphere
         camera.position.x = Math.sin(currentRotationX) * orbitRadius;
         camera.position.z = Math.cos(currentRotationX) * orbitRadius;
         camera.position.y = 2 + Math.sin(currentRotationY) * 2;
 
-        // Add minimum distance check
         const minDistance = 1.5;
         const currentDistance = Math.sqrt(
             camera.position.x * camera.position.x +
@@ -653,8 +757,6 @@ function animate(currentTime) {
 
         camera.lookAt(0, 0, 0);
     }
-
-    animateCamera(currentTime);
     
     // Update bootup animation
     if (isBooting) {
@@ -668,8 +770,8 @@ function animate(currentTime) {
         updateBootScreen();
     }
     
-    // Only update screen texture if needed (not during transitions)
-    if (!isAnimating) {
+    // Only update screen texture when not animating
+    if (!currentCameraAnimation) {
         screenTexture.needsUpdate = true;
     }
     
@@ -1130,16 +1232,18 @@ function updateBootScreen() {
     screenTexture.needsUpdate = true;
 }
 
-// Modify startZoomIn function to handle boot vs resume
+// Modify startZoomIn function to maintain screen state
 function startZoomIn() {
     const startTime = performance.now();
     const duration = zoomDuration * 0.5;
     
-    // Clear both screens to black initially
-    screenCtx.fillStyle = 'black';
-    screenCtx.fillRect(0, 0, screenCanvas.width, screenCanvas.height);
-    terminalCtx.fillStyle = 'black';
-    terminalCtx.fillRect(0, 0, terminalCanvas.width, terminalCanvas.height);
+    // Only clear screens if this is the first boot
+    if (!hasBootedBefore) {
+        screenCtx.fillStyle = 'black';
+        screenCtx.fillRect(0, 0, screenCanvas.width, screenCanvas.height);
+        terminalCtx.fillStyle = 'black';
+        terminalCtx.fillRect(0, 0, terminalCanvas.width, terminalCanvas.height);
+    }
     screenTexture.needsUpdate = true;
     
     function animate() {
@@ -1565,91 +1669,3 @@ window.addEventListener('resize', () => {
 
 // Initialize terminal canvas size
 updateTerminalCanvasSize();
-
-// Add new transition function
-function transitionToFrontView() {
-    const startTime = performance.now();
-    const duration = zoomDuration * 0.5; // Half the total zoom duration for this phase
-    
-    function animate() {
-        const elapsed = performance.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const eased = 1 - Math.pow(1 - progress, 3);
-        
-        // Move to front view position
-        camera.position.lerpVectors(
-            camera.position,
-            cameraStates.frontView.position,
-            eased
-        );
-        camera.lookAt(cameraStates.frontView.lookAt);
-        
-        if (progress < 1) {
-            requestAnimationFrame(animate);
-        } else {
-            // Once front view is reached, start zooming in
-            startZoomIn();
-        }
-    }
-    
-    animate();
-}
-
-// Modify startZoomOut to preserve screen and camera states
-function startZoomOut() {
-    isZoomedIn = false;
-    isAnimating = true;
-    isDragging = false; // Force stop any ongoing drag
-    
-    // Save current terminal state but clear the current command
-    lastTerminalState = {
-        page: currentPage,
-        command: '', // Clear the command
-        history: [...terminalHistory]
-    };
-    currentCommand = ''; // Clear current command immediately
-    
-    const startTime = performance.now();
-    const duration = zoomDuration;
-    
-    // Store initial camera position
-    const startPosition = camera.position.clone();
-    const endPosition = new THREE.Vector3(
-        Math.sin(lastOrbitalState.rotationX) * orbitRadius,
-        2 + Math.sin(lastOrbitalState.rotationY) * 2,
-        Math.cos(lastOrbitalState.rotationX) * orbitRadius
-    );
-    
-    function animate() {
-        const elapsed = performance.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const eased = 1 - Math.pow(1 - progress, 3);
-        
-        // First phase: fade out 2D terminal
-        if (progress <= 0.5) {
-            const fadeProgress = 1 - (progress * 2);
-            terminalContainer.style.opacity = fadeProgress;
-        }
-        
-        // Smooth camera transition throughout the entire duration
-        camera.position.lerpVectors(startPosition, endPosition, eased);
-        camera.lookAt(0, 0, 0);
-        
-        if (progress < 1) {
-            requestAnimationFrame(animate);
-        } else {
-            // Only reset terminal-related states
-            isAnimating = false;
-            showTerminal = false;
-            terminalContainer.style.pointerEvents = 'none';
-            
-            // Restore orbital camera controls without resetting screen
-            currentRotationX = lastOrbitalState.rotationX;
-            currentRotationY = lastOrbitalState.rotationY;
-            targetRotationX = lastOrbitalState.rotationX;
-            targetRotationY = lastOrbitalState.rotationY;
-        }
-    }
-    
-    animate();
-}
