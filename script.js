@@ -59,21 +59,13 @@ const bootSequenceText = [
     }
 ];
 
-// Terminal content configuration - obfuscated
-const _0x5f2d = [
-    "QnJpYW4gVHJhbSdzIFBvcnRmb2xpbw0KPT09PT09PT09PT09PT09PT09PT09PT09DQpUeXBlICdoZWxwJyB0byBzZWUgYXZhaWxhYmxlIGNvbW1hbmRzLg0KDQo=",
-    "QXZhaWxhYmxlIENvbW1hbmRzDQo9PT09PT09PT09PT09PT0NCmhlbHAgICAgIC0gU2hvdyB0aGlzIGhlbHAgbWVudQ0KaG9tZSAgICAgLSBSZXR1cm4gdG8gaG9tZSBwYWdlDQpjbGVhciAgICAtIENsZWFyIHRlcm1pbmFsDQphYm91dCAgICAtIEFib3V0IG1lDQpwcm9qZWN0cyAtIFZpZXcgbXkgcHJvamVjdHMNCmNvbnRhY3QgIC0gQ29udGFjdCBpbmZvcm1hdGlvbg0KDQpUeXBlIGEgY29tbWFuZCBhbmQgcHJlc3MgRW50ZXIuDQo=",
-    "QWJvdXQgTWUNCj09PT09PT09PQ0KSSBhbSBhIHNvZnR3YXJlIGRldmVsb3BlciB3aXRoIGEgcGFzc2lvbiBmb3IgY3JlYXRpbmcgaW50ZXJhY3RpdmUgYW5kIGVuZ2FnaW5nIHdlYiBleHBlcmllbmNlcy4NCg0K",
-    "TXkgUHJvamVjdHMNCj09PT09PT09PT09PQ0KMS4gUG9ydGZvbGlvIFdlYnNpdGUgKEN1cnJlbnQpDQoyLiBQcm9qZWN0IDINCjMuIFByb2plY3QgMw0KDQo=",
-    "Q29udGFjdCBJbmZvcm1hdGlvbg0KPT09PT09PT09PT09PT09PT09DQpFbWFpbDogZXhhbXBsZUBlbWFpbC5jb20NCkdpdEh1YjogZ2l0aHViLmNvbS91c2VybmFtZQ0KTGlua2VkSW46IGxpbmtlZGluLmNvbS9pbi91c2VybmFtZQ0KDQo="
-];
-
+// Terminal content configuration
 const terminalContent = {
-    home: atob(_0x5f2d[0]),
-    help: atob(_0x5f2d[1]),
-    about: atob(_0x5f2d[2]),
-    projects: atob(_0x5f2d[3]),
-    contact: atob(_0x5f2d[4])
+    home: "Brian Tram's Portfolio\n====================\nType 'help' to see available commands.\nType 'exit' to return to 3D view.\n",
+    help: "Available Commands\n=================\nhelp     - Show this help menu\nhome     - Return to home page\nabout    - About me\nprojects - View my projects\ncontact  - Contact information\nexit     - Return to 3D view\n",
+    about: "About Me\n========\nI am a software developer with a passion for creating interactive and engaging web experiences.\n",
+    projects: "My Projects\n===========\n1. Portfolio Website (Current)\n2. Project 2\n3. Project 3\n",
+    contact: "Contact Information\n===================\nEmail: example@email.com\nGitHub: github.com/username\nLinkedIn: linkedin.com/in/username\n"
 };
 
 // Load and set sky texture
@@ -165,11 +157,9 @@ function playRandomTypeSound() {
     const sound = new Audio('sounds/old keyboard.mp3');
     sound.preservesPitch = false;
     sound.playbackRate = soundConfig.pitch;
-    // Add slight random variation to volume (-10% to +10%)
     const volumeVariation = 1 + (Math.random() * 0.2 - 0.1);
-    sound.volume = 1.0; // Maximum volume
+    sound.volume = 1.0;
     
-    // Ensure the sound plays
     const playPromise = sound.play();
     if (playPromise !== undefined) {
         playPromise.catch(error => {
@@ -427,31 +417,54 @@ const matrixChars = null;
 let matrixDrops = null;
 let matrixColumns = null;
 
+// Add state tracking for terminal progress
+let hasBootedBefore = false;
+let lastTerminalState = {
+    page: 'home',
+    command: '',
+    history: []
+};
+
 // Function to start boot sequence
 function startBootSequence() {
-    currentBootLine = -1; // Reset to -1 so first increment puts us at 0
-    bootComplete = false; // Reset boot complete flag
-    const bootDuration = bootupSound.duration * 1000; // Convert to milliseconds
-    const lineDelay = bootDuration / bootSequenceText.length;
+    currentBootLine = -1;
+    bootComplete = false;
+    showTerminal = false;
+    currentPage = '';
     
-    function displayNextLine() {
-        if (currentBootLine < bootSequenceText.length - 1) {
-            currentBootLine++;
-            updateBootScreen();
-            
-            // Schedule next line
+    setTimeout(() => {
+        bootupSound.currentTime = 0;
+        bootupSound.play();
+        
+        const bootDuration = bootupSound.duration * 1000;
+        const lineDelay = bootDuration / bootSequenceText.length;
+        
+        function displayNextLine() {
             if (currentBootLine < bootSequenceText.length - 1) {
-                setTimeout(displayNextLine, lineDelay);
-            } else {
-                // Last line displayed
-                bootComplete = true;
-                setTimeout(startZoomTransition, 1000);
+                currentBootLine++;
+                updateBootScreen();
+                
+                if (currentBootLine < bootSequenceText.length - 1) {
+                    setTimeout(displayNextLine, lineDelay);
+                } else {
+                    // Last line displayed
+                    bootComplete = true;
+                    hasBootedBefore = true;
+                    // After boot completes, show terminal with home page
+                    setTimeout(() => {
+                        showTerminal = true;
+                        currentPage = 'home';
+                        currentCommand = '';
+                        enterTerminalSound.currentTime = 0;
+                        enterTerminalSound.play();
+                        updateBootScreen();
+                    }, 1000);
+                }
             }
         }
-    }
-    
-    // Start the sequence
-    displayNextLine();
+        
+        displayNextLine();
+    }, 500);
 }
 
 // Initialize terminal view
@@ -655,8 +668,11 @@ function animate(currentTime) {
         updateBootScreen();
     }
     
-    // Always update screen texture in animation loop
-    screenTexture.needsUpdate = true;
+    // Only update screen texture if needed (not during transitions)
+    if (!isAnimating) {
+        screenTexture.needsUpdate = true;
+    }
+    
     composer.render();
 }
 
@@ -681,7 +697,7 @@ window.addEventListener('resize', () => {
     outlinePass.resolution.set(width, height);
 });
 
-// Handle keyboard input for terminal
+// Add keyboard event handling
 window.addEventListener('keydown', (event) => {
     if (showTerminal) {
         if (event.key === 'Enter') {
@@ -691,7 +707,7 @@ window.addEventListener('keydown', (event) => {
             const sound = new Audio('sounds/old keyboard.mp3');
             sound.preservesPitch = false;
             sound.playbackRate = 1.2;
-            sound.volume = 1.0; // Maximum volume
+            sound.volume = 1.0;
             sound.play();
         } else if (event.key === 'Backspace') {
             currentCommand = currentCommand.slice(0, -1);
@@ -699,7 +715,7 @@ window.addEventListener('keydown', (event) => {
             const sound = new Audio('sounds/old keyboard.mp3');
             sound.preservesPitch = false;
             sound.playbackRate = 1.25;
-            sound.volume = 1.0; // Maximum volume
+            sound.volume = 1.0;
             sound.play();
         } else if (event.key.length === 1) {
             currentCommand += event.key;
@@ -709,30 +725,34 @@ window.addEventListener('keydown', (event) => {
     }
 });
 
+// Add command handling function
 function handleCommand(cmd) {
-    const terminal = document.getElementById('terminal');
-    const baseContent = terminal.getAttribute('data-content');
-    let newContent = baseContent + cmd + '\n';
-    
-    switch(cmd) {
+    switch(cmd.toLowerCase().trim()) {
         case 'help':
         case 'home':
         case 'about':
         case 'projects':
         case 'contact':
-            currentPage = cmd;
+            currentPage = cmd.toLowerCase().trim();
+            currentCommand = ''; // Clear command after execution
             break;
         case 'clear':
             terminalHistory.length = 0;
+            currentCommand = ''; // Clear command after execution
+            break;
+        case 'exit':
+            currentCommand = ''; // Clear command before starting exit animation
+            exitTerminalSound.currentTime = 0;
+            exitTerminalSound.play();
+            startZoomOut();
             break;
         default:
             if (cmd) {
                 terminalHistory.push(`Unknown command: ${cmd}`);
+                currentCommand = ''; // Clear command after execution
             }
     }
     
-    // Reset cursor position after command
-    currentCommand = '';
     updateBootScreen();
 }
 
@@ -1028,88 +1048,81 @@ document.addEventListener('DOMContentLoaded', () => {
     createUIElements();
 });
 
-// Update the updateBootScreen function
+// Modify updateBootScreen to handle terminal transition better
 function updateBootScreen() {
+    // Don't update if we're in the middle of zooming out
+    if (isAnimating && !isZoomedIn) return;
+
+    // Clear both screens to black first
     screenCtx.fillStyle = 'black';
     screenCtx.fillRect(0, 0, screenCanvas.width, screenCanvas.height);
+    terminalCtx.fillStyle = 'black';
+    terminalCtx.fillRect(0, 0, terminalCanvas.width, terminalCanvas.height);
     
-    // Only show content if booting has started
-    if (isBooting || bootComplete) {
-        if (!showTerminal) {
-            // Set up monospace text style
-            screenCtx.font = '16px "Courier New", monospace';
-            screenCtx.fillStyle = '#ffffff';
-            
-            let yPos = 40;
-            const lineHeight = 20;
-            const maxWidth = screenCanvas.width - 40;
-            const margin = 20;
-            
-            // Draw boot sequence text with wrapping
-            for (let i = 0; i <= currentBootLine; i++) {
-                const line = bootSequenceText[i];
-                if (line) {
-                    if (line.header) {
-                        // Draw header if it exists
-                        let text = line.header;
-                        if (line.content) {
-                            // If there's content and a header, format with colon
-                            text += ": " + line.content;
-                        }
-                        yPos = wrapText(screenCtx, text, margin, yPos, maxWidth, lineHeight);
-                    } else {
-                        // Draw content only
-                        yPos = wrapText(screenCtx, line.content, margin, yPos, maxWidth, lineHeight);
-                    }
-                    yPos += lineHeight;
-                }
-            }
+    // Set up text style for both contexts
+    screenCtx.font = '16px "Courier New", monospace';
+    screenCtx.fillStyle = '#ffffff';
+    terminalCtx.font = '16px "Courier New", monospace';
+    terminalCtx.fillStyle = '#ffffff';
+    
+    let screenYPos = 40;
+    let terminalYPos = 40;
+    const lineHeight = 20;
+    const screenMaxWidth = screenCanvas.width - 40;
+    const terminalMaxWidth = terminalCanvas.width - 40;
+    const margin = 20;
 
-            if (bootupProgress >= 1 && !showTerminal) {
-                setTimeout(() => {
-                    showTerminal = true;
-                    currentPage = 'home';
-                    enterTerminalSound.currentTime = 0;
-                    enterTerminalSound.play();
-                    updateBootScreen();
-                }, 1000);
+    if (!bootComplete || !showTerminal) {
+        // Draw boot sequence
+        for (let i = 0; i <= currentBootLine; i++) {
+            const line = bootSequenceText[i];
+            if (line) {
+                let text = '';
+                if (line.header) {
+                    text = line.header;
+                    if (line.content) {
+                        text += ": " + line.content;
+                    }
+                } else {
+                    text = line.content;
+                }
+                
+                // Draw on both screens
+                screenYPos = wrapText(screenCtx, text, margin, screenYPos, screenMaxWidth, lineHeight);
+                terminalYPos = wrapText(terminalCtx, text, margin, terminalYPos, terminalMaxWidth, lineHeight);
+                screenYPos += lineHeight;
+                terminalYPos += lineHeight;
             }
-        } else {
-            // Draw terminal interface
-            screenCtx.font = '16px "Courier New", monospace';
-            screenCtx.fillStyle = '#ffffff';
-            
-            let yPos = 40;
-            const lineHeight = 20;
-            const maxWidth = screenCanvas.width - 40;
-            const margin = 20;
-            
-            // Draw page content
-            const pageContent = terminalContent[currentPage];
+        }
+    } else {
+        // Draw terminal content
+        const pageContent = terminalContent[currentPage];
+        if (pageContent) {
             const lines = pageContent.split('\n');
             
             for (const line of lines) {
                 if (line.trim() === '') {
-                    yPos += lineHeight;
+                    screenYPos += lineHeight;
+                    terminalYPos += lineHeight;
                     continue;
                 }
-                yPos = wrapText(screenCtx, line, margin, yPos, maxWidth, lineHeight);
-                yPos += lineHeight;
                 
-                if (yPos > screenCanvas.height - 40) {
-                    break;
-                }
+                // Draw on both screens
+                screenYPos = wrapText(screenCtx, line, margin, screenYPos, screenMaxWidth, lineHeight);
+                terminalYPos = wrapText(terminalCtx, line, margin, terminalYPos, terminalMaxWidth, lineHeight);
+                screenYPos += lineHeight;
+                terminalYPos += lineHeight;
             }
 
-            // Handle command line with cursor
-            if (yPos <= screenCanvas.height - 40) {
-                const prompt = '> ';
-                screenCtx.fillText(prompt + currentCommand, margin, yPos);
-                
-                if (cursorVisible) {
-                    const promptWidth = screenCtx.measureText(prompt + currentCommand).width;
-                    screenCtx.fillText('█', margin + promptWidth, yPos);
-                }
+            // Draw command prompt
+            const prompt = '> ';
+            screenCtx.fillText(prompt + currentCommand, margin, screenYPos);
+            terminalCtx.fillText(prompt + currentCommand, margin, terminalYPos);
+            
+            if (cursorVisible) {
+                const promptWidth = screenCtx.measureText(prompt + currentCommand).width;
+                screenCtx.fillText('█', margin + promptWidth, screenYPos);
+                terminalCtx.fillText('█', margin + promptWidth, terminalYPos);
             }
         }
     }
@@ -1117,21 +1130,59 @@ function updateBootScreen() {
     screenTexture.needsUpdate = true;
 }
 
-// Update the drawBootSequence function
-function drawBootSequence() {
-    if (currentBootLine < bootSequenceText.length - 1) {
-        currentBootLine++;
-        updateBootScreen();
-    } else if (!bootComplete) {
-        bootComplete = true;
-        setTimeout(startZoomTransition, 1000);
+// Modify startZoomIn function to handle boot vs resume
+function startZoomIn() {
+    const startTime = performance.now();
+    const duration = zoomDuration * 0.5;
+    
+    // Clear both screens to black initially
+    screenCtx.fillStyle = 'black';
+    screenCtx.fillRect(0, 0, screenCanvas.width, screenCanvas.height);
+    terminalCtx.fillStyle = 'black';
+    terminalCtx.fillRect(0, 0, terminalCanvas.width, terminalCanvas.height);
+    screenTexture.needsUpdate = true;
+    
+    function animate() {
+        const elapsed = performance.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        
+        // Zoom in from front view to close-up
+        camera.position.lerpVectors(
+            cameraStates.frontView.position,
+            cameraStates.zoomedIn.position,
+            eased
+        );
+        camera.lookAt(cameraStates.zoomedIn.lookAt);
+        
+        // Fade to black and show 2D terminal container
+        if (progress > 0.5) {
+            const fadeProgress = (progress - 0.5) * 2;
+            terminalContainer.style.opacity = fadeProgress;
+            terminalContainer.style.pointerEvents = 'auto';
+        }
+        
+        if (progress < 1) {
+            requestAnimationFrame(animate);
+        } else {
+            // Once fully zoomed in, either start boot or resume terminal
+            if (!hasBootedBefore) {
+                isBooting = true;
+                startBootSequence();
+            } else {
+                // Resume previous terminal state
+                showTerminal = true;
+                currentPage = lastTerminalState.page;
+                currentCommand = lastTerminalState.command;
+                terminalHistory = [...lastTerminalState.history];
+                enterTerminalSound.currentTime = 0;
+                enterTerminalSound.play();
+                updateBootScreen();
+            }
+        }
     }
-}
-
-// Update startZoomTransition function
-function startZoomTransition() {
-    zoomTransitionActive = true;
-    animateZoom();
+    
+    animate();
 }
 
 // Variables for camera animation
@@ -1139,15 +1190,19 @@ let isAnimating = false;
 let animationStartTime = 0;
 let isZoomedIn = false;
 
-// Define the two camera states
+// Add new camera state for direct front view
 const cameraStates = {
     default: {
         position: new THREE.Vector3(2, 2, 4),
         lookAt: new THREE.Vector3(0, 0, 0)
     },
+    frontView: {
+        position: new THREE.Vector3(0, 0.4, 1.5), // Directly in front of screen
+        lookAt: new THREE.Vector3(0, 0.4, 0)  // Look at center of screen
+    },
     zoomedIn: {
-        position: new THREE.Vector3(0.035, 0.4, 0.1),
-        lookAt: new THREE.Vector3(0.035, 0.4, 0)  // Look slightly forward from the camera position
+        position: new THREE.Vector3(0, 0.4, 0.1), // Very close to screen
+        lookAt: new THREE.Vector3(0, 0.4, 0)  // Look at center of screen
     }
 };
 
@@ -1261,6 +1316,7 @@ tableLoader.load(
     }
 );
 
+// Modify onClick function to handle re-entry
 function onClick(event) {
     if (isAnimating) return;
 
@@ -1270,7 +1326,6 @@ function onClick(event) {
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObjects(scene.children, true);
 
-    // Find first intersection with any computer part
     const computerIntersect = intersects.find(intersect => 
         intersect.object.userData.isComputer
     );
@@ -1278,22 +1333,15 @@ function onClick(event) {
     if (computerIntersect) {
         isAnimating = true;
         animationStartTime = performance.now();
-        isZoomedIn = !isZoomedIn;
+        isZoomedIn = true;
         
-        if (isZoomedIn) {
-            if (!isBooting && !bootComplete) {
-                isBooting = true;
-                bootupSound.currentTime = 0;
-                bootupSound.play();
-                startBootSequence();
-            } else if (bootComplete) {
-                enterTerminalSound.currentTime = 0;
-                enterTerminalSound.play();
-            }
-        } else {
-            exitTerminalSound.currentTime = 0;
-            exitTerminalSound.play();
-        }
+        // Store current camera state before transitioning
+        lastOrbitalState.position.copy(camera.position);
+        lastOrbitalState.rotationX = currentRotationX;
+        lastOrbitalState.rotationY = currentRotationY;
+        
+        // First transition to front view
+        transitionToFrontView();
     }
 }
 
@@ -1337,6 +1385,7 @@ let lastOrbitalState = {
     rotationY: 0
 };
 
+// Modify animateCamera function for zoom out
 function animateCamera(currentTime) {
     if (!isAnimating) return;
 
@@ -1344,28 +1393,7 @@ function animateCamera(currentTime) {
     const progress = Math.min(elapsed / zoomDuration, 1);
     const eased = 1 - Math.pow(1 - progress, 3);
 
-    if (isZoomedIn) {
-        // Store current orbital state
-        lastOrbitalState.position.copy(camera.position);
-        lastOrbitalState.rotationX = currentRotationX;
-        lastOrbitalState.rotationY = currentRotationY;
-        
-        // Calculate start and end positions
-        const startPosition = camera.position.clone();
-        const endPosition = cameraStates.zoomedIn.position.clone();
-        
-        // Calculate start and end look targets
-        // This is the key change - create a consistent look direction throughout the animation
-        const startLookAt = new THREE.Vector3(0, 0.4, 0); // Look at middle of screen from the start
-        const endLookAt = cameraStates.zoomedIn.lookAt;
-        
-        // Interpolate position and lookAt
-        camera.position.lerpVectors(startPosition, endPosition, eased);
-        
-        const currentLookAt = new THREE.Vector3();
-        currentLookAt.lerpVectors(startLookAt, endLookAt, eased);
-        camera.lookAt(currentLookAt);
-    } else {
+    if (!isZoomedIn) {
         // Zooming out - restore orbital state
         const startPosition = cameraStates.zoomedIn.position.clone();
         const endPosition = new THREE.Vector3();
@@ -1378,17 +1406,21 @@ function animateCamera(currentTime) {
         camera.position.lerpVectors(startPosition, endPosition, eased);
         camera.lookAt(0, 0, 0);
         
+        // Fade out 2D terminal
+        if (progress < 0.5) {
+            const fadeProgress = 1 - (progress * 2);
+            terminalContainer.style.opacity = fadeProgress;
+            terminalContainer.style.pointerEvents = 'none';
+        }
+        
         // Restore rotation values
         if (progress >= 1) {
             currentRotationX = lastOrbitalState.rotationX;
             currentRotationY = lastOrbitalState.rotationY;
             targetRotationX = lastOrbitalState.rotationX;
             targetRotationY = lastOrbitalState.rotationY;
+            isAnimating = false;
         }
-    }
-
-    if (progress >= 1) {
-        isAnimating = false;
     }
 }
 
@@ -1409,7 +1441,7 @@ const rotationSpeed = 0.005; // Reduced from 0.01 to make panning slower
 
 // Update mouse controls
 document.addEventListener('mousedown', (event) => {
-    if (event.button === 0 && !isZoomedIn) { // Left click only
+    if (event.button === 0 && !isZoomedIn && !isAnimating) { // Only allow dragging when not animating
         isDragging = true;
         previousMouseX = event.clientX;
         previousMouseY = event.clientY;
@@ -1421,7 +1453,7 @@ document.addEventListener('mouseup', () => {
 });
 
 document.addEventListener('mousemove', (event) => {
-    if (isDragging && !isZoomedIn) {
+    if (isDragging && !isZoomedIn && !isAnimating) { // Only update rotation when not animating
         const deltaX = event.clientX - previousMouseX;
         const deltaY = event.clientY - previousMouseY;
         
@@ -1439,3 +1471,185 @@ document.addEventListener('dragstart', (event) => {
         event.preventDefault();
     }
 });
+
+// Add terminal container for 2D view
+const terminalContainer = document.createElement('div');
+terminalContainer.id = 'terminal-container';
+terminalContainer.style.position = 'fixed';
+terminalContainer.style.top = '0';
+terminalContainer.style.left = '0';
+terminalContainer.style.width = '100%';
+terminalContainer.style.height = '100%';
+terminalContainer.style.backgroundColor = '#000';
+terminalContainer.style.zIndex = '1000';
+terminalContainer.style.opacity = '0';
+terminalContainer.style.pointerEvents = 'none';
+document.body.appendChild(terminalContainer);
+
+// Add terminal canvas for 2D view
+const terminalCanvas = document.createElement('canvas');
+terminalCanvas.id = 'terminal-canvas';
+terminalCanvas.style.position = 'absolute';
+terminalCanvas.style.top = '50%';
+terminalCanvas.style.left = '50%';
+terminalCanvas.style.transform = 'translate(-50%, -50%)';
+terminalCanvas.style.width = '80%';
+terminalCanvas.style.height = '80%';
+terminalContainer.appendChild(terminalCanvas);
+
+// Get terminal canvas context
+const terminalCtx = terminalCanvas.getContext('2d');
+
+// Update terminal canvas size
+function updateTerminalCanvasSize() {
+    terminalCanvas.width = terminalCanvas.offsetWidth;
+    terminalCanvas.height = terminalCanvas.offsetHeight;
+    updateTerminalContent();
+}
+
+// Update terminal content
+function updateTerminalContent() {
+    terminalCtx.fillStyle = '#000';
+    terminalCtx.fillRect(0, 0, terminalCanvas.width, terminalCanvas.height);
+    
+    terminalCtx.font = '16px "Courier New", monospace';
+    terminalCtx.fillStyle = '#ffffff';
+    
+    let yPos = 40;
+    const lineHeight = 20;
+    const maxWidth = terminalCanvas.width - 40;
+    const margin = 20;
+    
+    // Draw page content
+    const pageContent = terminalContent[currentPage];
+    const lines = pageContent.split('\n');
+    
+    for (const line of lines) {
+        if (line.trim() === '') {
+            yPos += lineHeight;
+            continue;
+        }
+        yPos = wrapText(terminalCtx, line, margin, yPos, maxWidth, lineHeight);
+        yPos += lineHeight;
+        
+        if (yPos > terminalCanvas.height - 40) {
+            break;
+        }
+    }
+
+    // Handle command line with cursor
+    if (yPos <= terminalCanvas.height - 40) {
+        const prompt = '> ';
+        terminalCtx.fillText(prompt + currentCommand, margin, yPos);
+        
+        if (cursorVisible) {
+            const promptWidth = terminalCtx.measureText(prompt + currentCommand).width;
+            terminalCtx.fillText('█', margin + promptWidth, yPos);
+        }
+    }
+}
+
+// Update window resize handler
+window.addEventListener('resize', () => {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+    renderer.setSize(width, height);
+    composer.setSize(width, height);
+    outlinePass.resolution.set(width, height);
+    
+    updateTerminalCanvasSize();
+});
+
+// Initialize terminal canvas size
+updateTerminalCanvasSize();
+
+// Add new transition function
+function transitionToFrontView() {
+    const startTime = performance.now();
+    const duration = zoomDuration * 0.5; // Half the total zoom duration for this phase
+    
+    function animate() {
+        const elapsed = performance.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        
+        // Move to front view position
+        camera.position.lerpVectors(
+            camera.position,
+            cameraStates.frontView.position,
+            eased
+        );
+        camera.lookAt(cameraStates.frontView.lookAt);
+        
+        if (progress < 1) {
+            requestAnimationFrame(animate);
+        } else {
+            // Once front view is reached, start zooming in
+            startZoomIn();
+        }
+    }
+    
+    animate();
+}
+
+// Modify startZoomOut to preserve screen and camera states
+function startZoomOut() {
+    isZoomedIn = false;
+    isAnimating = true;
+    isDragging = false; // Force stop any ongoing drag
+    
+    // Save current terminal state but clear the current command
+    lastTerminalState = {
+        page: currentPage,
+        command: '', // Clear the command
+        history: [...terminalHistory]
+    };
+    currentCommand = ''; // Clear current command immediately
+    
+    const startTime = performance.now();
+    const duration = zoomDuration;
+    
+    // Store initial camera position
+    const startPosition = camera.position.clone();
+    const endPosition = new THREE.Vector3(
+        Math.sin(lastOrbitalState.rotationX) * orbitRadius,
+        2 + Math.sin(lastOrbitalState.rotationY) * 2,
+        Math.cos(lastOrbitalState.rotationX) * orbitRadius
+    );
+    
+    function animate() {
+        const elapsed = performance.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        
+        // First phase: fade out 2D terminal
+        if (progress <= 0.5) {
+            const fadeProgress = 1 - (progress * 2);
+            terminalContainer.style.opacity = fadeProgress;
+        }
+        
+        // Smooth camera transition throughout the entire duration
+        camera.position.lerpVectors(startPosition, endPosition, eased);
+        camera.lookAt(0, 0, 0);
+        
+        if (progress < 1) {
+            requestAnimationFrame(animate);
+        } else {
+            // Only reset terminal-related states
+            isAnimating = false;
+            showTerminal = false;
+            terminalContainer.style.pointerEvents = 'none';
+            
+            // Restore orbital camera controls without resetting screen
+            currentRotationX = lastOrbitalState.rotationX;
+            currentRotationY = lastOrbitalState.rotationY;
+            targetRotationX = lastOrbitalState.rotationX;
+            targetRotationY = lastOrbitalState.rotationY;
+        }
+    }
+    
+    animate();
+}
