@@ -63,9 +63,9 @@ const bootSequenceText = [
 const terminalContent = {
     home: "Brian Tram's Portfolio\n====================\nType 'help' to see available commands.\nType 'exit' to return to 3D view.\n",
     help: "Available Commands\n=================\nhelp     - Show this help menu\nhome     - Return to home page\nabout    - About me\nprojects - View my projects\ncontact  - Contact information\nexit     - Return to 3D view\n",
-    about: "About Me\n========\nI am a software developer with a passion for creating interactive and engaging web experiences.\n",
-    projects: "My Projects\n===========\n1. Portfolio Website (Current)\n2. Project 2\n3. Project 3\n",
-    contact: "Contact Information\n===================\nEmail: example@email.com\nGitHub: github.com/username\nLinkedIn: linkedin.com/in/username\n"
+    about: "About Me\n========\n17 — i like building and creating stuff\n",
+    projects: "My Projects\n===========\n1. portfolio\n2. school senior film\n3. tram editor (name is troll)\n",
+    contact: "Contact Information\n===================\nEmail: brian.q.tram@gmail.com\nGitHub: github.com/briant01\nLinkedIn: linkedin.com/in/brian-tram/\nTwitter/X: x.com/trxm_br\n"
 };
 
 // Load and set sky texture
