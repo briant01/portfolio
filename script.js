@@ -61,11 +61,10 @@ const bootSequenceText = [
 
 // Terminal content configuration
 const terminalContent = {
-    home: "Brian Tram's Portfolio\n====================\nType 'help' to see available commands.\nType 'exit' to return to 3D view.\n",
-    help: "Available Commands\n=================\nhelp     - show this help menu\nhome     - return to home page\nabout    - about me\nprojects - view my projects\ncontact  - contact information\nexit     - return to 3D view\n",
-    about: "About Me\n========\n17 — i like building and creating\n",
-    projects: "My Projects\n===========\n1. portfolio\n2. school senior film\n3. tram editor (name is troll)\n",
-    contact: "Contact Information\n===================\nEmail: brian.q.tram@gmail.com\nGitHub: github.com/briant01\nLinkedIn: linkedin.com/in/brian-tram/\nTwitter/X: x.com/trxm_br\n"
+    home: "Brian Tram's Portfolio\nEnter 'home' to return to home page or 'exit' to return to 3D view.\n====================\n\n\nabout    - about me\nprojects - view my projects\ncontact  - contact information\nhome     - return to home page\nexit     - return to 3D view\n",
+    about: "Brian Tram's Portfolio\nEnter 'home' to return to home page or 'exit' to return to 3D view.\n====================\n\n\n17 — i like building and creating\n",
+    projects: "Brian Tram's Portfolio\nEnter 'home' to return to home page or 'exit' to return to 3D view.\n====================\n\n\n1. portfolio\n2. tram editor (name temporary, yc summer batch incoming???)\n3. school senior film\n",
+    contact: "Brian Tram's Portfolio\nEnter 'home' to return to home page or 'exit' to return to 3D view.\n====================\n\n\n===================\nEmail: brian.q.tram@gmail.com\nGitHub: github.com/briant01\nLinkedIn: linkedin.com/in/brian-tram/\nTwitter/X: x.com/trxm_br\n"
 };
 
 // Load and set sky texture
@@ -835,7 +834,6 @@ window.addEventListener('keydown', (event) => {
 // Add command handling function
 function handleCommand(cmd) {
     switch(cmd.toLowerCase().trim()) {
-        case 'help':
         case 'home':
         case 'about':
         case 'projects':
