@@ -63,8 +63,8 @@ const bootSequenceText = [
 const terminalContent = {
     home: "Brian Tram's Portfolio\nEnter 'home' to return to home page or 'exit' to return to 3D view.\n====================\n\n\nabout    - about me\nprojects - view my projects\ncontact  - contact information\nhome     - return to home page\nexit     - return to 3D view\n",
     about: "Brian Tram's Portfolio\nEnter 'home' to return to home page or 'exit' to return to 3D view.\n====================\n\n\n17 — i like building and creating\n",
-    projects: "Brian Tram's Portfolio\nEnter 'home' to return to home page or 'exit' to return to 3D view.\n====================\n\n\n1. portfolio\n2. tram editor (name temporary, yc summer batch incoming???)\n3. school senior film\n",
-    contact: "Brian Tram's Portfolio\nEnter 'home' to return to home page or 'exit' to return to 3D view.\n====================\n\n\n===================\nEmail: brian.q.tram@gmail.com\nGitHub: github.com/briant01\nLinkedIn: linkedin.com/in/brian-tram/\nTwitter/X: x.com/trxm_br\n"
+    projects: "Brian Tram's Portfolio\nEnter 'home' to return to home page or 'exit' to return to 3D view.\n====================\n\n\n1. portfolio\n2. tram editor (name temporary, big things coming soon)\n3. school senior film\n4. yt (trambrr)",
+    contact: "Brian Tram's Portfolio\nEnter 'home' to return to home page or 'exit' to return to 3D view.\n====================\n\n\nEmail: brian.q.tram@gmail.com\n\nYoutube: trambrr\nGitHub: briant01\nLinkedIn: brian-tram\nTwitter/X: trxm_br\n"
 };
 
 // Load and set sky texture
