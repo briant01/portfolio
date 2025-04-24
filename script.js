@@ -64,7 +64,7 @@ const terminalContent = {
     home: "Brian Tram's Portfolio\nEnter 'home' to return to home page or 'exit' to return to 3D view.\n====================\n\n\nabout    - about me\nprojects - view my projects\ncontact  - contact information\nhome     - return to home page\nexit     - return to 3D view\n",
     about: "Brian Tram's Portfolio\nEnter 'home' to return to home page or 'exit' to return to 3D view.\n====================\n\n\n17 — i like building and creating\n",
     projects: "Brian Tram's Portfolio\nEnter 'home' to return to home page or 'exit' to return to 3D view.\n====================\n\n\n1. portfolio\n2. tram editor (name temporary, big things coming soon)\n3. school senior film\n4. yt (trambrr)",
-    contact: "Brian Tram's Portfolio\nEnter 'home' to return to home page or 'exit' to return to 3D view.\n====================\n\n\nEmail: brian.q.tram@gmail.com\n\nYoutube: trambrr\nGitHub: briant01\nLinkedIn: brian-tram\nTwitter/X: trxm_br\n"
+    contact: "Brian Tram's Portfolio\nEnter 'home' to return to home page or 'exit' to return to 3D view.\n====================\n\n\nEmail: brian.q.tram@gmail.com\n\nYoutube: trambrr\nGitHub: briant01\nLinkedIn: Brian Tram\nTwitter/X: trxm_br\n"
 };
 
 // Load and set sky texture
@@ -490,6 +490,20 @@ function initTerminal() {
     terminal.style.zIndex = '999';
     terminal.style.opacity = '0';
     
+    // Add mobile input element
+    const mobileInput = document.createElement('input');
+    mobileInput.type = 'text';
+    mobileInput.id = 'mobile-input';
+    mobileInput.style.position = 'absolute';
+    mobileInput.style.top = '0';
+    mobileInput.style.left = '0';
+    mobileInput.style.width = '1px';
+    mobileInput.style.height = '1px';
+    mobileInput.style.opacity = '0';
+    mobileInput.style.pointerEvents = 'none';
+    mobileInput.style.zIndex = '1000';
+    terminal.appendChild(mobileInput);
+    
     document.body.appendChild(terminal);
     
     // Fade in terminal
@@ -532,8 +546,10 @@ function startTerminalSequence() {
 // Make terminal interactive
 function makeTerminalInteractive() {
     const terminal = document.getElementById('terminal');
+    const mobileInput = document.getElementById('mobile-input');
     let currentInput = '';
     
+    // Handle desktop keyboard input
     document.addEventListener('keydown', (e) => {
         if (!bootComplete) return;
         
@@ -548,6 +564,32 @@ function makeTerminalInteractive() {
         
         const baseContent = terminal.getAttribute('data-content');
         terminal.textContent = baseContent + currentInput;
+    });
+    
+    // Handle mobile input
+    mobileInput.addEventListener('input', (e) => {
+        if (!bootComplete) return;
+        currentInput = e.target.value;
+        const baseContent = terminal.getAttribute('data-content');
+        terminal.textContent = baseContent + currentInput;
+    });
+    
+    mobileInput.addEventListener('keydown', (e) => {
+        if (!bootComplete) return;
+        
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleTerminalCommand(currentInput);
+            currentInput = '';
+            mobileInput.value = '';
+        }
+    });
+    
+    // Focus mobile input when terminal is clicked
+    terminal.addEventListener('click', () => {
+        if (bootComplete) {
+            mobileInput.focus();
+        }
     });
 }
 
@@ -801,6 +843,15 @@ window.addEventListener('resize', () => {
     renderer.setSize(width, height);
     composer.setSize(width, height);
     outlinePass.resolution.set(width, height);
+    
+    updateTerminalCanvasSize();
+    
+    // Adjust mobile input for different screen sizes
+    const mobileInput = document.getElementById('mobile-input');
+    if (mobileInput) {
+        mobileInput.style.fontSize = terminalConfig.fontSize;
+        mobileInput.style.fontFamily = terminalConfig.fontFamily;
+    }
 });
 
 // Add keyboard event handling
@@ -1668,6 +1719,13 @@ window.addEventListener('resize', () => {
     outlinePass.resolution.set(width, height);
     
     updateTerminalCanvasSize();
+    
+    // Adjust mobile input for different screen sizes
+    const mobileInput = document.getElementById('mobile-input');
+    if (mobileInput) {
+        mobileInput.style.fontSize = terminalConfig.fontSize;
+        mobileInput.style.fontFamily = terminalConfig.fontFamily;
+    }
 });
 // Initialize terminal canvas size
 updateTerminalCanvasSize();
