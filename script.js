@@ -489,22 +489,45 @@ function initTerminal() {
     terminal.style.overflow = 'hidden';
     terminal.style.zIndex = '999';
     terminal.style.opacity = '0';
+    terminal.style.cursor = 'text';
     
-    // Add mobile input element
+    // Create a simple text input for mobile
     const mobileInput = document.createElement('input');
     mobileInput.type = 'text';
     mobileInput.id = 'mobile-input';
-    mobileInput.style.position = 'absolute';
-    mobileInput.style.top = '0';
-    mobileInput.style.left = '0';
-    mobileInput.style.width = '1px';
-    mobileInput.style.height = '1px';
-    mobileInput.style.opacity = '0';
-    mobileInput.style.pointerEvents = 'none';
-    mobileInput.style.zIndex = '1000';
-    terminal.appendChild(mobileInput);
+    mobileInput.autocomplete = 'off';
+    mobileInput.style.cssText = `
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 40px;
+        opacity: 0;
+        background: transparent;
+        color: transparent;
+        border: none;
+        outline: none;
+        padding: 0;
+        margin: 0;
+        -webkit-appearance: none;
+    `;
     
+    terminal.appendChild(mobileInput);
     document.body.appendChild(terminal);
+    
+    // Add global click/touch handler
+    document.addEventListener('click', function(e) {
+        if (bootComplete && showTerminal) {
+            mobileInput.focus();
+        }
+    });
+    
+    document.addEventListener('touchstart', function(e) {
+        if (bootComplete && showTerminal) {
+            e.preventDefault();
+            mobileInput.focus();
+        }
+    }, { passive: false });
     
     // Fade in terminal
     let opacity = 0;
@@ -549,29 +572,13 @@ function makeTerminalInteractive() {
     const mobileInput = document.getElementById('mobile-input');
     let currentInput = '';
     
-    // Handle desktop keyboard input
-    document.addEventListener('keydown', (e) => {
-        if (!bootComplete) return;
-        
-        if (e.key === 'Enter') {
-            handleTerminalCommand(currentInput);
-            currentInput = '';
-        } else if (e.key === 'Backspace') {
-            currentInput = currentInput.slice(0, -1);
-        } else if (e.key.length === 1) {
-            currentInput += e.key;
-        }
-        
-        const baseContent = terminal.getAttribute('data-content');
-        terminal.textContent = baseContent + currentInput;
-    });
-    
     // Handle mobile input
     mobileInput.addEventListener('input', (e) => {
         if (!bootComplete) return;
         currentInput = e.target.value;
         const baseContent = terminal.getAttribute('data-content');
         terminal.textContent = baseContent + currentInput;
+        updateBootScreen();
     });
     
     mobileInput.addEventListener('keydown', (e) => {
@@ -579,17 +586,35 @@ function makeTerminalInteractive() {
         
         if (e.key === 'Enter') {
             e.preventDefault();
-            handleTerminalCommand(currentInput);
+            handleCommand(currentInput);
             currentInput = '';
             mobileInput.value = '';
+            updateBootScreen();
+        } else if (e.key === 'Backspace') {
+            playRandomTypeSound();
+        } else if (e.key.length === 1) {
+            playRandomTypeSound();
         }
     });
     
-    // Focus mobile input when terminal is clicked
-    terminal.addEventListener('click', () => {
-        if (bootComplete) {
-            mobileInput.focus();
+    // Handle desktop keyboard input as fallback
+    document.addEventListener('keydown', (e) => {
+        if (!bootComplete || !showTerminal) return;
+        
+        if (e.key === 'Enter') {
+            handleCommand(currentInput);
+            currentInput = '';
+            mobileInput.value = '';
+        } else if (e.key === 'Backspace') {
+            currentInput = currentInput.slice(0, -1);
+            mobileInput.value = currentInput;
+            playRandomTypeSound();
+        } else if (e.key.length === 1) {
+            currentInput += e.key;
+            mobileInput.value = currentInput;
+            playRandomTypeSound();
         }
+        updateBootScreen();
     });
 }
 
