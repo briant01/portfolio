@@ -63,7 +63,7 @@ const bootSequenceText = [
 const terminalContent = {
     home: "Brian Tram's Portfolio\n====================\nType 'help' to see available commands.\nType 'exit' to return to 3D view.\n",
     help: "Available Commands\n=================\nhelp     - Show this help menu\nhome     - Return to home page\nabout    - About me\nprojects - View my projects\ncontact  - Contact information\nexit     - Return to 3D view\n",
-    about: "About Me\n========\n17 — i like building and creating stuff\n",
+    about: "About Me\n========\n17 — i like building and creating\n",
     projects: "My Projects\n===========\n1. portfolio\n2. school senior film\n3. tram editor (name is troll)\n",
     contact: "Contact Information\n===================\nEmail: brian.q.tram@gmail.com\nGitHub: github.com/briant01\nLinkedIn: linkedin.com/in/brian-tram/\nTwitter/X: x.com/trxm_br\n"
 };
@@ -136,8 +136,13 @@ renderer.toneMappingExposure = 1.1; // Slightly increased exposure
 
 // Create audio elements for sounds
 const bootupSound = new Audio('sounds/Boot Up.mp3');
+bootupSound.volume = 1;
+
 const enterTerminalSound = new Audio('sounds/Enter Terminal.mp3');
+enterTerminalSound.volume = 1;
+
 const exitTerminalSound = new Audio('sounds/Exit Terminal.mp3');
+exitTerminalSound.volume = 1;
 
 // Create audio elements for typing sounds
 const baseKeyboardSound = new Audio('sounds/old keyboard.mp3');
