@@ -1,6 +1,64 @@
 // Initialize Three.js scene
 const scene = new THREE.Scene();
 
+// Boot sequence configuration
+const bootSequenceText = [
+    {
+        header: "BG IG, a System-Act Ally",
+        content: "Copyright (C) 2084-2108, Halden Electronics Inc."
+    },
+    {
+        header: "CPU Type",
+        content: "BORSON 300 CPU at 2500 MHz"
+    },
+    {
+        header: "Memory test",
+        content: "4521586k OK"
+    },
+    {
+        header: "Boot Distribitioner Application v0.04",
+        content: "Copyright (C) 2107 Distribitioner"
+    },
+    {
+        content: "Detecting Sting X ROM"
+    },
+    {
+        content: "Detecting Web LNV Extender"
+    },
+    {
+        content: "Detecting Heartbeats OK"
+    },
+    {
+        header: "UTGF Device Listening..",
+        content: ""
+    },
+    {
+        header: "Body    ID      Neural    Device Class",
+        content: "----------------------------------------"
+    },
+    {
+        content: "2       52      Jo152     H515"
+    },
+    {
+        content: "2       52      Sa5155    H515"
+    },
+    {
+        content: "2       52      Bo75      H515"
+    },
+    {
+        content: "2       52      Eri510    H515"
+    },
+    {
+        content: "1       36      Ell567    H515"
+    },
+    {
+        content: "1       36      Jos912    H515"
+    },
+    {
+        content: "0"
+    }
+];
+
 // Terminal content configuration - obfuscated
 const _0x5f2d = [
     "QnJpYW4gVHJhbSdzIFBvcnRmb2xpbw0KPT09PT09PT09PT09PT09PT09PT09PT09DQpUeXBlICdoZWxwJyB0byBzZWUgYXZhaWxhYmxlIGNvbW1hbmRzLg0KDQo=",
@@ -342,462 +400,193 @@ function wrapText(context, text, x, y, maxWidth, lineHeight) {
     return posY;
 }
 
-// Update the updateBootScreen function to use text wrapping
-function updateBootScreen() {
-    screenCtx.fillStyle = 'black';
-    screenCtx.fillRect(0, 0, screenCanvas.width, screenCanvas.height);
-    
-    if (!showTerminal) {
-        if (isBooting || bootupProgress >= 1) {
-            // Set up retro text style
-            screenCtx.fillStyle = '#ffffff';
-            screenCtx.font = 'bold 32px "Courier New", monospace';
-            screenCtx.fillText('LOADING...', 100, 200);
-            
-            // Display percentage
-            const percent = Math.floor(bootupProgress * 100);
-            screenCtx.fillText(percent + '%', 400, 200);
-            
-            // Draw retro progress bar border
-            const barWidth = 300;
-            const barHeight = 30;
-            const barX = 100;
-            const barY = 220;
-            
-            // Outer border (2px thick)
-            screenCtx.fillStyle = '#ffffff';
-            screenCtx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
-            screenCtx.fillStyle = 'black';
-            screenCtx.fillRect(barX, barY, barWidth, barHeight);
-            
-            // Draw segmented progress
-            const segments = 20;
-            const segmentWidth = barWidth / segments;
-            const filledSegments = Math.floor(bootupProgress * segments);
-            
-            screenCtx.fillStyle = '#ffffff';
-            for (let i = 0; i < filledSegments; i++) {
-                screenCtx.fillRect(
-                    barX + (i * segmentWidth),
-                    barY,
-                    segmentWidth - 2,
-                    barHeight
-                );
-            }
+// Matrix rain effect characters
+const matrixChars = null;
 
-            if (bootupProgress >= 1) {
+// Matrix rain configuration
+let matrixDrops = null;
+let matrixColumns = null;
+
+// Boot sequence state
+let currentBootLine = 0;
+let bootComplete = false;
+let zoomTransitionActive = false;
+let zoomProgress = 0;
+
+// Terminal configuration
+const terminalConfig = {
+    fontSize: '16px',
+    fontFamily: 'monospace',
+    textColor: '#0F0',
+    backgroundColor: '#000',
+    padding: '20px',
+    lineHeight: '1.5'
+};
+
+// Initialize terminal view
+function initTerminal() {
+    const terminal = document.createElement('div');
+    terminal.id = 'terminal';
+    terminal.style.position = 'fixed';
+    terminal.style.top = '0';
+    terminal.style.left = '0';
+    terminal.style.width = '100%';
+    terminal.style.height = '100%';
+    terminal.style.backgroundColor = terminalConfig.backgroundColor;
+    terminal.style.color = terminalConfig.textColor;
+    terminal.style.fontFamily = terminalConfig.fontFamily;
+    terminal.style.fontSize = terminalConfig.fontSize;
+    terminal.style.padding = terminalConfig.padding;
+    terminal.style.lineHeight = terminalConfig.lineHeight;
+    terminal.style.overflow = 'hidden';
+    terminal.style.zIndex = '999';
+    terminal.style.opacity = '0';
+    
+    document.body.appendChild(terminal);
+    
+    // Fade in terminal
+    let opacity = 0;
+    const fadeIn = setInterval(() => {
+        opacity += 0.1;
+        terminal.style.opacity = opacity;
+        if (opacity >= 1) {
+            clearInterval(fadeIn);
+            startTerminalSequence();
+        }
+    }, 100);
+}
+
+// Start terminal sequence
+function startTerminalSequence() {
+    const terminal = document.getElementById('terminal');
+    let currentContent = '';
+    
+    // Display each line of the boot sequence with typing effect
+    bootSequenceText.forEach((line, index) => {
+        setTimeout(() => {
+            currentContent += line.header + ': ' + line.content + '\n';
+            terminal.textContent = currentContent;
+            playRandomTypeSound();
+            
+            // When sequence is complete, add command prompt
+            if (index === bootSequenceText.length - 1) {
                 setTimeout(() => {
-                    showTerminal = true;
-                    currentPage = 'home';
-                    enterTerminalSound.currentTime = 0;
-                    enterTerminalSound.play();
-                    updateBootScreen();
+                    currentContent += '\n> ';
+                    terminal.textContent = currentContent;
+                    terminal.setAttribute('data-content', currentContent);
+                    makeTerminalInteractive();
                 }, 1000);
             }
-        }
-    } else {
-        // Draw terminal interface
-        screenCtx.font = '16px "Courier New", monospace';
-        screenCtx.fillStyle = '#ffffff';
-        
-        let yPos = 40;
-        const lineHeight = 20;
-        const maxWidth = screenCanvas.width - 40;
-        const margin = 20;
-        
-        // Draw page content
-        const pageContent = terminalContent[currentPage];
-        const lines = pageContent.split('\n');
-        
-        for (const line of lines) {
-            if (line.trim() === '') {
-                yPos += lineHeight;
-                continue;
-            }
-            yPos = wrapText(screenCtx, line, margin, yPos, maxWidth, lineHeight);
-            yPos += lineHeight;
-            
-            if (yPos > screenCanvas.height - 40) {
-                break;
-            }
-        }
+        }, index * 1000);
+    });
+}
 
-        // Handle command line with cursor
-        if (yPos <= screenCanvas.height - 40) {
-            const prompt = '> ';
-            const promptWidth = screenCtx.measureText(prompt).width;
+// Make terminal interactive
+function makeTerminalInteractive() {
+    const terminal = document.getElementById('terminal');
+    let currentInput = '';
+    
+    document.addEventListener('keydown', (e) => {
+        if (!bootComplete) return;
+        
+        if (e.key === 'Enter') {
+            handleTerminalCommand(currentInput);
+            currentInput = '';
+        } else if (e.key === 'Backspace') {
+            currentInput = currentInput.slice(0, -1);
+        } else if (e.key.length === 1) {
+            currentInput += e.key;
+        }
+        
+        const baseContent = terminal.getAttribute('data-content');
+        terminal.textContent = baseContent + currentInput;
+    });
+}
+
+// Handle terminal commands
+function handleTerminalCommand(command) {
+    const terminal = document.getElementById('terminal');
+    const baseContent = terminal.getAttribute('data-content');
+    let newContent = baseContent + command + '\n';
+    
+    switch(command.toLowerCase().trim()) {
+        case 'help':
+            newContent += 'Available commands:\n';
+            newContent += '  help     - Show this help menu\n';
+            newContent += '  clear    - Clear terminal\n';
+            newContent += '  exit     - Exit terminal mode\n';
+            break;
             
-            // Draw the prompt
-            screenCtx.fillText(prompt, margin, yPos);
+        case 'clear':
+            newContent = '> ';
+            break;
             
-            // Handle the command text wrapping
-            if (currentCommand) {
-                let remainingText = currentCommand;
-                let currentX = margin + promptWidth;
-                let currentY = yPos;
-                let lastPortionLength = 0;
-                
-                while (remainingText.length > 0) {
-                    let availableWidth = currentY === yPos ? 
-                        maxWidth - promptWidth : // First line (after prompt)
-                        maxWidth; // Subsequent lines
-                    
-                    // Find how many characters fit in the available width
-                    let fitLength = 0;
-                    let testWidth = 0;
-                    
-                    while (fitLength < remainingText.length) {
-                        testWidth += screenCtx.measureText(remainingText[fitLength]).width;
-                        if (testWidth > availableWidth) break;
-                        fitLength++;
-                    }
-                    
-                    // Draw the portion that fits
-                    const portion = remainingText.substring(0, fitLength);
-                    screenCtx.fillText(portion, currentX, currentY);
-                    lastPortionLength = portion.length;
-                    
-                    // Update remaining text and position
-                    remainingText = remainingText.substring(fitLength);
-                    if (remainingText.length > 0) {
-                        currentY += lineHeight;
-                        currentX = margin;
-                        
-                        // Check if we've hit the bottom of the screen
-                        if (currentY > screenCanvas.height - 40) break;
-                    }
-                }
-                
-                // Add cursor at the end if there's room
-                if (cursorVisible && currentY <= screenCanvas.height - 40) {
-                    // Calculate width of the last portion of text
-                    const lastPortionWidth = screenCtx.measureText(
-                        currentCommand.substring(currentCommand.length - lastPortionLength)
-                    ).width;
-                    screenCtx.fillText('█', currentX + lastPortionWidth, currentY);
-                }
-            } else if (cursorVisible) {
-                // If no command text, just draw cursor after prompt
-                screenCtx.fillText('█', margin + promptWidth, yPos);
-            }
+        case 'exit':
+            exitTerminalMode();
+            return;
+            
+        default:
+            newContent += 'Command not recognized. Type "help" for available commands.\n';
+    }
+    
+    newContent += '> ';
+    terminal.textContent = newContent;
+    terminal.setAttribute('data-content', newContent);
+}
+
+// Exit terminal mode and zoom out to 3D view
+function exitTerminalMode() {
+    const terminal = document.getElementById('terminal');
+    
+    // Fade out terminal
+    let opacity = 1;
+    const fadeOut = setInterval(() => {
+        opacity -= 0.1;
+        terminal.style.opacity = opacity;
+        if (opacity <= 0) {
+            clearInterval(fadeOut);
+            terminal.remove();
+            zoomOut();
+        }
+    }, 100);
+}
+
+// Zoom out to 3D view
+function zoomOut() {
+    zoomTransitionActive = true;
+    zoomProgress = 1;
+    
+    function animateZoomOut() {
+        if (!zoomTransitionActive) return;
+        
+        zoomProgress -= 0.02;
+        
+        if (zoomProgress >= 0) {
+            camera.position.z = 5 * (1 - zoomProgress);
+            camera.position.y = 2 * (1 - zoomProgress);
+            requestAnimationFrame(animateZoomOut);
+        } else {
+            zoomTransitionActive = false;
+            resetCamera();
         }
     }
     
-    screenTexture.needsUpdate = true;
+    animateZoomOut();
 }
 
-// Set initial camera position
-camera.position.set(2, 2, 4);
-camera.lookAt(0, 0, 0);
-
-// Variables for camera animation
-let isAnimating = false;
-let animationStartTime = 0;
-let isZoomedIn = false;
-
-// Define the two camera states
-const cameraStates = {
-    default: {
-        position: new THREE.Vector3(2, 2, 4),
-        lookAt: new THREE.Vector3(0, 0, 0)
-    },
-    zoomedIn: {
-        position: new THREE.Vector3(0.035, 0.4, 0.1),
-        lookAt: new THREE.Vector3(0.035, 0.4, 0)  // Look slightly forward from the camera position
-    }
-};
-
-// Animation settings
-const zoomDuration = 1500;
-
-// Raycaster for mouse interaction
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-let selectedObject = null;
-
-// Load the table model first
-const tableLoader = new THREE.GLTFLoader();
-tableLoader.load(
-    'models/table/scene.gltf',
-    function (gltf) {
-        const table = gltf.scene;
-        scene.add(table);
-        
-        // Center and scale the table
-        const box = new THREE.Box3().setFromObject(table);
-        const center = box.getCenter(new THREE.Vector3());
-        table.position.sub(center);
-        
-        // Scale the table - calculate base scale
-        const size = box.getSize(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const baseScale = 1.5 / maxDim; // Reduced from 1.9 to make table smaller
-        
-        // Apply wider scale for length and width, keep height at base scale
-        table.scale.set(
-            baseScale * 1.5,  // length - 50% wider
-            baseScale,        // height - keep original
-            baseScale * 1.5   // width - 50% wider
-        );
-
-        // Move table back and center
-        table.position.z -= 0.5; // Move table back
-        table.position.x = 0; // Center horizontally
-
-        // Enable shadows for the table
-        table.traverse((child) => {
-            if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-                child.userData.isTable = true;
-            }
-        });
-
-        // Load the computer model after the table is loaded
-        const computerLoader = new THREE.GLTFLoader();
-        computerLoader.load(
-            'models/computer/scene.gltf',
-            function (gltf) {
-                const computer = gltf.scene;
-                scene.add(computer);
-                
-                // Center and rotate the computer
-                const computerBox = new THREE.Box3().setFromObject(computer);
-                const computerCenter = computerBox.getCenter(new THREE.Vector3());
-                computer.position.sub(computerCenter);
-                computer.rotation.y = Math.PI / 2;
-                
-                // Scale the computer
-                const computerSize = computerBox.getSize(new THREE.Vector3());
-                const computerMaxDim = Math.max(computerSize.x, computerSize.y, computerSize.z);
-                const computerScale = 2.0 / computerMaxDim;
-                computer.scale.multiplyScalar(computerScale);
-
-                // Position table below computer
-                const tableHeight = size.y * baseScale;
-                table.position.y = computer.position.y - (tableHeight / 2) - (computerSize.y * computerScale / 2);
-
-                // Center computer horizontally and move back
-                computer.position.x = 0;
-                computer.position.z -= 0.8; // Move computer back to match table
-
-                // Enable shadows and set up materials for the computer
-                computer.traverse((child) => {
-                    if (child.isMesh) {
-                        child.castShadow = true;
-                        child.receiveShadow = true;
-                        child.material.metalness = 0.3;
-                        child.material.roughness = 0.7;
-                        // Tag the entire computer for interaction
-                        child.userData.isComputer = true;
-                        if (child.name.toLowerCase().includes('screen') || 
-                            child.material.name.toLowerCase().includes('screen')) {
-                            child.material = screenMaterial;
-                        }
-                    }
-                });
-
-                // Add event listeners
-                window.addEventListener('click', onClick);
-                window.addEventListener('mousemove', onMouseMove);
-            },
-            function (xhr) {
-                console.log('Computer: ' + (xhr.loaded / xhr.total * 100) + '% loaded');
-            },
-            function (error) {
-                console.error('An error occurred while loading the computer model:', error);
-            }
-        );
-    },
-    function (xhr) {
-        console.log('Table: ' + (xhr.loaded / xhr.total * 100) + '% loaded');
-    },
-    function (error) {
-        console.error('An error occurred while loading the table model:', error);
-    }
-);
-
-function onClick(event) {
-    if (isAnimating) return;
-
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-    raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObjects(scene.children, true);
-
-    // Find first intersection with any computer part
-    const computerIntersect = intersects.find(intersect => 
-        intersect.object.userData.isComputer
-    );
-
-    if (computerIntersect) {
-        isAnimating = true;
-        animationStartTime = performance.now();
-        isZoomedIn = !isZoomedIn;
-        
-        if (isZoomedIn) {
-            if (bootupProgress === 0 && !isBooting) {
-                isBooting = true;
-                bootupSound.currentTime = 0;
-                bootupSound.play();
-            } else if (bootupProgress >= 1) {
-                enterTerminalSound.currentTime = 0;
-                enterTerminalSound.play();
-            }
-        } else {
-            exitTerminalSound.currentTime = 0;
-            exitTerminalSound.play();
-        }
-    }
+// Reset camera to original position
+function resetCamera() {
+    camera.position.set(0, 2, 5);
+    camera.lookAt(0, 0, 0);
 }
 
-function onMouseMove(event) {
-    // Don't show hover effects when zoomed in
-    if (isZoomedIn) {
-        selectedObject = null;
-        outlinePass.selectedObjects = [];
-        return;
-    }
-
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-    raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObjects(scene.children, true);
-
-    // Find first intersection with any computer part
-    const computerIntersect = intersects.find(intersect => 
-        intersect.object.userData.isComputer
-    );
-
-    if (computerIntersect) {
-        // Get the root computer object for highlighting the entire model
-        let rootObject = computerIntersect.object;
-        while (rootObject.parent && !rootObject.parent.isScene) {
-            rootObject = rootObject.parent;
-        }
-        selectedObject = rootObject;
-        outlinePass.selectedObjects = [selectedObject];
-    } else {
-        selectedObject = null;
-        outlinePass.selectedObjects = [];
-    }
-}
-
-// Store the last orbital camera state
-let lastOrbitalState = {
-    position: new THREE.Vector3(),
-    rotationX: 0,
-    rotationY: 0
-};
-
-function animateCamera(currentTime) {
-    if (!isAnimating) return;
-
-    const elapsed = currentTime - animationStartTime;
-    const progress = Math.min(elapsed / zoomDuration, 1);
-    const eased = 1 - Math.pow(1 - progress, 3);
-
-    if (isZoomedIn) {
-        // Store current orbital state
-        lastOrbitalState.position.copy(camera.position);
-        lastOrbitalState.rotationX = currentRotationX;
-        lastOrbitalState.rotationY = currentRotationY;
-        
-        // Calculate start and end positions
-        const startPosition = camera.position.clone();
-        const endPosition = cameraStates.zoomedIn.position.clone();
-        
-        // Calculate start and end look targets
-        // This is the key change - create a consistent look direction throughout the animation
-        const startLookAt = new THREE.Vector3(0, 0.4, 0); // Look at middle of screen from the start
-        const endLookAt = cameraStates.zoomedIn.lookAt;
-        
-        // Interpolate position and lookAt
-        camera.position.lerpVectors(startPosition, endPosition, eased);
-        
-        const currentLookAt = new THREE.Vector3();
-        currentLookAt.lerpVectors(startLookAt, endLookAt, eased);
-        camera.lookAt(currentLookAt);
-    } else {
-        // Zooming out - restore orbital state
-        const startPosition = cameraStates.zoomedIn.position.clone();
-        const endPosition = new THREE.Vector3();
-        
-        // Calculate end position based on stored rotation
-        endPosition.x = Math.sin(lastOrbitalState.rotationX) * orbitRadius;
-        endPosition.z = Math.cos(lastOrbitalState.rotationX) * orbitRadius;
-        endPosition.y = 2 + Math.sin(lastOrbitalState.rotationY) * 2;
-        
-        camera.position.lerpVectors(startPosition, endPosition, eased);
-        camera.lookAt(0, 0, 0);
-        
-        // Restore rotation values
-        if (progress >= 1) {
-            currentRotationX = lastOrbitalState.rotationX;
-            currentRotationY = lastOrbitalState.rotationY;
-            targetRotationX = lastOrbitalState.rotationX;
-            targetRotationY = lastOrbitalState.rotationY;
-        }
-    }
-
-    if (progress >= 1) {
-        isAnimating = false;
-    }
-}
-
-// Add mouse movement variables
-let mouseX = 0;
-let mouseY = 0;
-let targetRotationX = 0;
-let targetRotationY = 0;
-let currentRotationX = 0;
-let currentRotationY = 0;
-let isDragging = false;
-let previousMouseX = 0;
-let previousMouseY = 0;
-const orbitRadius = 4.5; // Distance from center
-const orbitSpeed = 0.15; // Speed of rotation
-const maxTiltY = 0.5; // Maximum up/down tilt
-const rotationSpeed = 0.005; // Reduced from 0.01 to make panning slower
-
-// Update mouse controls
-document.addEventListener('mousedown', (event) => {
-    if (event.button === 0 && !isZoomedIn) { // Left click only
-        isDragging = true;
-        previousMouseX = event.clientX;
-        previousMouseY = event.clientY;
-    }
-});
-
-document.addEventListener('mouseup', () => {
-    isDragging = false;
-});
-
-document.addEventListener('mousemove', (event) => {
-    if (isDragging && !isZoomedIn) {
-        const deltaX = event.clientX - previousMouseX;
-        const deltaY = event.clientY - previousMouseY;
-        
-        targetRotationX += deltaX * rotationSpeed;
-        targetRotationY = Math.max(-maxTiltY, Math.min(maxTiltY, targetRotationY + deltaY * rotationSpeed));
-        
-        previousMouseX = event.clientX;
-        previousMouseY = event.clientY;
-    }
-});
-
-// Prevent dragging from selecting text
-document.addEventListener('dragstart', (event) => {
-    if (isDragging) {
-        event.preventDefault();
-    }
-});
-
-// Modify the animation loop
+// Modified animate function
 function animate(currentTime) {
     requestAnimationFrame(animate);
+    
+    if (!bootComplete) {
+        drawBootSequence();
+    }
     
     if (!isAnimating && !isZoomedIn) {
         // Smooth camera movement
@@ -810,7 +599,7 @@ function animate(currentTime) {
         camera.position.y = 2 + Math.sin(currentRotationY) * 2;
 
         // Add minimum distance check
-        const minDistance = 1.5; // Minimum distance from center
+        const minDistance = 1.5;
         const currentDistance = Math.sqrt(
             camera.position.x * camera.position.x +
             camera.position.y * camera.position.y +
@@ -822,7 +611,6 @@ function animate(currentTime) {
             camera.position.multiplyScalar(scale);
         }
 
-        // Always look at the center
         camera.lookAt(0, 0, 0);
     }
 
@@ -830,8 +618,7 @@ function animate(currentTime) {
     
     // Update bootup animation
     if (isBooting && bootupProgress < 1) {
-        const progress = (bootupSound.currentTime / bootupSound.duration) * 1.2;
-        bootupProgress = Math.min(progress, 1);
+        bootupProgress = Math.min((currentBootLine + 1) / bootSequenceText.length, 1);
         
         if (bootupProgress >= 1) {
             bootupProgress = 1;
@@ -843,7 +630,14 @@ function animate(currentTime) {
     composer.render();
 }
 
-animate();
+// Initialize everything
+function init() {
+    // Only start the animation loop, don't start bootup
+    animate();
+}
+
+// Start only the animation when the page loads
+window.addEventListener('load', init);
 
 // Update window resize handler
 window.addEventListener('resize', () => {
@@ -886,7 +680,9 @@ window.addEventListener('keydown', (event) => {
 });
 
 function handleCommand(cmd) {
-    const maxWidth = screenCanvas.width - 40;
+    const terminal = document.getElementById('terminal');
+    const baseContent = terminal.getAttribute('data-content');
+    let newContent = baseContent + cmd + '\n';
     
     switch(cmd) {
         case 'help':
@@ -1201,3 +997,437 @@ document.addEventListener('DOMContentLoaded', () => {
     // Create new UI
     createUIElements();
 });
+
+// Update the updateBootScreen function
+function updateBootScreen() {
+    screenCtx.fillStyle = 'black';
+    screenCtx.fillRect(0, 0, screenCanvas.width, screenCanvas.height);
+    
+    if (!showTerminal) {
+        // Set up monospace text style
+        screenCtx.font = '16px "Courier New", monospace';
+        screenCtx.fillStyle = '#ffffff';
+        
+        let yPos = 40;
+        const lineHeight = 20;
+        
+        // Draw boot sequence text
+        for (let i = 0; i <= currentBootLine; i++) {
+            const line = bootSequenceText[i];
+            if (line) {
+                if (line.header) {
+                    // Draw header if it exists
+                    screenCtx.fillStyle = '#ffffff';
+                    let text = line.header;
+                    if (line.content) {
+                        // If there's content and a header, format with colon
+                        text += ": " + line.content;
+                    }
+                    screenCtx.fillText(text, 20, yPos);
+                } else {
+                    // Draw content only
+                    screenCtx.fillText(line.content, 20, yPos);
+                }
+                yPos += lineHeight;
+            }
+        }
+
+        if (bootupProgress >= 1) {
+            setTimeout(() => {
+                showTerminal = true;
+                currentPage = 'home';
+                enterTerminalSound.currentTime = 0;
+                enterTerminalSound.play();
+                updateBootScreen();
+            }, 1000);
+        }
+    } else {
+        // Draw terminal interface
+        screenCtx.font = '16px "Courier New", monospace';
+        screenCtx.fillStyle = '#ffffff';
+        
+        let yPos = 40;
+        const lineHeight = 20;
+        const maxWidth = screenCanvas.width - 40;
+        const margin = 20;
+        
+        // Draw page content
+        const pageContent = terminalContent[currentPage];
+        const lines = pageContent.split('\n');
+        
+        for (const line of lines) {
+            if (line.trim() === '') {
+                yPos += lineHeight;
+                continue;
+            }
+            yPos = wrapText(screenCtx, line, margin, yPos, maxWidth, lineHeight);
+            yPos += lineHeight;
+            
+            if (yPos > screenCanvas.height - 40) {
+                break;
+            }
+        }
+
+        // Handle command line with cursor
+        if (yPos <= screenCanvas.height - 40) {
+            const prompt = '> ';
+            screenCtx.fillText(prompt + currentCommand, margin, yPos);
+            
+            if (cursorVisible) {
+                const promptWidth = screenCtx.measureText(prompt + currentCommand).width;
+                screenCtx.fillText('█', margin + promptWidth, yPos);
+            }
+        }
+    }
+    
+    screenTexture.needsUpdate = true;
+}
+
+// Update the drawBootSequence function
+function drawBootSequence() {
+    if (currentBootLine < bootSequenceText.length - 1) {
+        currentBootLine++;
+        updateBootScreen();
+    } else if (!bootComplete) {
+        bootComplete = true;
+        setTimeout(startZoomTransition, 1000);
+    }
+}
+
+// Update startZoomTransition function
+function startZoomTransition() {
+    zoomTransitionActive = true;
+    animateZoom();
+}
+
+// Variables for camera animation
+let isAnimating = false;
+let animationStartTime = 0;
+let isZoomedIn = false;
+
+// Define the two camera states
+const cameraStates = {
+    default: {
+        position: new THREE.Vector3(2, 2, 4),
+        lookAt: new THREE.Vector3(0, 0, 0)
+    },
+    zoomedIn: {
+        position: new THREE.Vector3(0.035, 0.4, 0.1),
+        lookAt: new THREE.Vector3(0.035, 0.4, 0)  // Look slightly forward from the camera position
+    }
+};
+
+// Animation settings
+const zoomDuration = 1500;
+
+// Raycaster for mouse interaction
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let selectedObject = null;
+
+// Load the table model first
+const tableLoader = new THREE.GLTFLoader();
+tableLoader.load(
+    'models/table/scene.gltf',
+    function (gltf) {
+        const table = gltf.scene;
+        scene.add(table);
+        
+        // Center and scale the table
+        const box = new THREE.Box3().setFromObject(table);
+        const center = box.getCenter(new THREE.Vector3());
+        table.position.sub(center);
+        
+        // Scale the table - calculate base scale
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const baseScale = 1.5 / maxDim; // Reduced from 1.9 to make table smaller
+        
+        // Apply wider scale for length and width, keep height at base scale
+        table.scale.set(
+            baseScale * 1.5,  // length - 50% wider
+            baseScale,        // height - keep original
+            baseScale * 1.5   // width - 50% wider
+        );
+
+        // Move table back and center
+        table.position.z -= 0.5; // Move table back
+        table.position.x = 0; // Center horizontally
+
+        // Enable shadows for the table
+        table.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+                child.userData.isTable = true;
+            }
+        });
+
+        // Load the computer model after the table is loaded
+        const computerLoader = new THREE.GLTFLoader();
+        computerLoader.load(
+            'models/computer/scene.gltf',
+            function (gltf) {
+                const computer = gltf.scene;
+                scene.add(computer);
+                
+                // Center and rotate the computer
+                const computerBox = new THREE.Box3().setFromObject(computer);
+                const computerCenter = computerBox.getCenter(new THREE.Vector3());
+                computer.position.sub(computerCenter);
+                computer.rotation.y = Math.PI / 2;
+                
+                // Scale the computer
+                const computerSize = computerBox.getSize(new THREE.Vector3());
+                const computerMaxDim = Math.max(computerSize.x, computerSize.y, computerSize.z);
+                const computerScale = 2.0 / computerMaxDim;
+                computer.scale.multiplyScalar(computerScale);
+
+                // Position table below computer
+                const tableHeight = size.y * baseScale;
+                table.position.y = computer.position.y - (tableHeight / 2) - (computerSize.y * computerScale / 2);
+
+                // Center computer horizontally and move back
+                computer.position.x = 0;
+                computer.position.z -= 0.8; // Move computer back to match table
+
+                // Enable shadows and set up materials for the computer
+                computer.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                        child.material.metalness = 0.3;
+                        child.material.roughness = 0.7;
+                        // Tag the entire computer for interaction
+                        child.userData.isComputer = true;
+                        if (child.name.toLowerCase().includes('screen') || 
+                            child.material.name.toLowerCase().includes('screen')) {
+                            child.material = screenMaterial;
+                        }
+                    }
+                });
+
+                // Add event listeners
+                window.addEventListener('click', onClick);
+                window.addEventListener('mousemove', onMouseMove);
+            },
+            function (xhr) {
+                console.log('Computer: ' + (xhr.loaded / xhr.total * 100) + '% loaded');
+            },
+            function (error) {
+                console.error('An error occurred while loading the computer model:', error);
+            }
+        );
+    },
+    function (xhr) {
+        console.log('Table: ' + (xhr.loaded / xhr.total * 100) + '% loaded');
+    },
+    function (error) {
+        console.error('An error occurred while loading the table model:', error);
+    }
+);
+
+function onClick(event) {
+    if (isAnimating) return;
+
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(scene.children, true);
+
+    // Find first intersection with any computer part
+    const computerIntersect = intersects.find(intersect => 
+        intersect.object.userData.isComputer
+    );
+
+    if (computerIntersect) {
+        isAnimating = true;
+        animationStartTime = performance.now();
+        isZoomedIn = !isZoomedIn;
+        
+        if (isZoomedIn) {
+            if (bootupProgress === 0 && !isBooting) {
+                isBooting = true;
+                bootupSound.currentTime = 0;
+                bootupSound.play();
+                startBootSequence();
+            } else if (bootupProgress >= 1) {
+                enterTerminalSound.currentTime = 0;
+                enterTerminalSound.play();
+            }
+        } else {
+            exitTerminalSound.currentTime = 0;
+            exitTerminalSound.play();
+        }
+    }
+}
+
+function onMouseMove(event) {
+    // Don't show hover effects when zoomed in
+    if (isZoomedIn) {
+        selectedObject = null;
+        outlinePass.selectedObjects = [];
+        return;
+    }
+
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(scene.children, true);
+
+    // Find first intersection with any computer part
+    const computerIntersect = intersects.find(intersect => 
+        intersect.object.userData.isComputer
+    );
+
+    if (computerIntersect) {
+        // Get the root computer object for highlighting the entire model
+        let rootObject = computerIntersect.object;
+        while (rootObject.parent && !rootObject.parent.isScene) {
+            rootObject = rootObject.parent;
+        }
+        selectedObject = rootObject;
+        outlinePass.selectedObjects = [selectedObject];
+    } else {
+        selectedObject = null;
+        outlinePass.selectedObjects = [];
+    }
+}
+
+// Store the last orbital camera state
+let lastOrbitalState = {
+    position: new THREE.Vector3(),
+    rotationX: 0,
+    rotationY: 0
+};
+
+function animateCamera(currentTime) {
+    if (!isAnimating) return;
+
+    const elapsed = currentTime - animationStartTime;
+    const progress = Math.min(elapsed / zoomDuration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+
+    if (isZoomedIn) {
+        // Store current orbital state
+        lastOrbitalState.position.copy(camera.position);
+        lastOrbitalState.rotationX = currentRotationX;
+        lastOrbitalState.rotationY = currentRotationY;
+        
+        // Calculate start and end positions
+        const startPosition = camera.position.clone();
+        const endPosition = cameraStates.zoomedIn.position.clone();
+        
+        // Calculate start and end look targets
+        // This is the key change - create a consistent look direction throughout the animation
+        const startLookAt = new THREE.Vector3(0, 0.4, 0); // Look at middle of screen from the start
+        const endLookAt = cameraStates.zoomedIn.lookAt;
+        
+        // Interpolate position and lookAt
+        camera.position.lerpVectors(startPosition, endPosition, eased);
+        
+        const currentLookAt = new THREE.Vector3();
+        currentLookAt.lerpVectors(startLookAt, endLookAt, eased);
+        camera.lookAt(currentLookAt);
+    } else {
+        // Zooming out - restore orbital state
+        const startPosition = cameraStates.zoomedIn.position.clone();
+        const endPosition = new THREE.Vector3();
+        
+        // Calculate end position based on stored rotation
+        endPosition.x = Math.sin(lastOrbitalState.rotationX) * orbitRadius;
+        endPosition.z = Math.cos(lastOrbitalState.rotationX) * orbitRadius;
+        endPosition.y = 2 + Math.sin(lastOrbitalState.rotationY) * 2;
+        
+        camera.position.lerpVectors(startPosition, endPosition, eased);
+        camera.lookAt(0, 0, 0);
+        
+        // Restore rotation values
+        if (progress >= 1) {
+            currentRotationX = lastOrbitalState.rotationX;
+            currentRotationY = lastOrbitalState.rotationY;
+            targetRotationX = lastOrbitalState.rotationX;
+            targetRotationY = lastOrbitalState.rotationY;
+        }
+    }
+
+    if (progress >= 1) {
+        isAnimating = false;
+    }
+}
+
+// Add mouse movement variables
+let mouseX = 0;
+let mouseY = 0;
+let targetRotationX = 0;
+let targetRotationY = 0;
+let currentRotationX = 0;
+let currentRotationY = 0;
+let isDragging = false;
+let previousMouseX = 0;
+let previousMouseY = 0;
+const orbitRadius = 4.5; // Distance from center
+const orbitSpeed = 0.15; // Speed of rotation
+const maxTiltY = 0.5; // Maximum up/down tilt
+const rotationSpeed = 0.005; // Reduced from 0.01 to make panning slower
+
+// Update mouse controls
+document.addEventListener('mousedown', (event) => {
+    if (event.button === 0 && !isZoomedIn) { // Left click only
+        isDragging = true;
+        previousMouseX = event.clientX;
+        previousMouseY = event.clientY;
+    }
+});
+
+document.addEventListener('mouseup', () => {
+    isDragging = false;
+});
+
+document.addEventListener('mousemove', (event) => {
+    if (isDragging && !isZoomedIn) {
+        const deltaX = event.clientX - previousMouseX;
+        const deltaY = event.clientY - previousMouseY;
+        
+        targetRotationX += deltaX * rotationSpeed;
+        targetRotationY = Math.max(-maxTiltY, Math.min(maxTiltY, targetRotationY + deltaY * rotationSpeed));
+        
+        previousMouseX = event.clientX;
+        previousMouseY = event.clientY;
+    }
+});
+
+// Prevent dragging from selecting text
+document.addEventListener('dragstart', (event) => {
+    if (isDragging) {
+        event.preventDefault();
+    }
+});
+
+// Function to start boot sequence
+function startBootSequence() {
+    currentBootLine = -1; // Start at -1 so first increment puts us at 0
+    const bootDuration = bootupSound.duration * 1000; // Convert to milliseconds
+    const lineDelay = bootDuration / bootSequenceText.length;
+    
+    function displayNextLine() {
+        if (currentBootLine < bootSequenceText.length - 1) {
+            currentBootLine++;
+            updateBootScreen();
+            
+            // Schedule next line
+            if (currentBootLine < bootSequenceText.length - 1) {
+                setTimeout(displayNextLine, lineDelay);
+            } else {
+                // Last line displayed
+                bootComplete = true;
+                setTimeout(startZoomTransition, 1000);
+            }
+        }
+    }
+    
+    // Start the sequence
+    displayNextLine();
+}
